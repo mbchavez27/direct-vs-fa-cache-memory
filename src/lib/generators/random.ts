@@ -1,18 +1,28 @@
-// A simple seeded random number generator (Linear Congruential Generator)
+const UINT32_RANGE = 0x1_0000_0000;
+const ACCESS_COUNT = 64;
+const MEMORY_BLOCK_COUNT = 1024;
+
 export class SeededRandom {
-    private seed: number;
+	private seed: number;
 
-    constructor(seed: number = Date.now()) {
-        this.seed = seed;
-    }
+	constructor(seed: number = Date.now()) {
+		if (!Number.isSafeInteger(seed)) {
+			throw new TypeError('Random seed must be an integer.');
+		}
 
-    public next(): number {
-        // TODO: Implement LCG random generation
-        return 0;
-    }
+		this.seed = seed >>> 0;
+	}
+
+	public next(): number {
+		this.seed = (Math.imul(1664525, this.seed) + 1013904223) >>> 0;
+		return this.seed / UINT32_RANGE;
+	}
 }
 
 export function generateRandom(seed: number | null = null): number[] {
-    // TODO: Generate exactly 64 accesses, integers from 0 through 1023
-    return [];
+	const random = new SeededRandom(seed ?? Date.now());
+
+	return Array.from({ length: ACCESS_COUNT }, () =>
+		Math.floor(random.next() * MEMORY_BLOCK_COUNT)
+	);
 }
