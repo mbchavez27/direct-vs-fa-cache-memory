@@ -110,8 +110,7 @@ export class FullyAssociativeMRUCache {
         return {
             step: this.currentStep,
             memoryBlock,
-            hit: isHit,
-            miss: !isHit,
+            isHit,
             cacheLineIndex: targetLineIndex,
             tag: memoryBlock,
             evictedMemoryBlock,

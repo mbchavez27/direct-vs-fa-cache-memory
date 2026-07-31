@@ -78,12 +78,38 @@ export class CacheSimulator {
     }
 
     public step(): boolean {
-        // TODO: Process one memory access step
-        // - Get current memory block
-        // - Access cache
-        // - Update metrics
-        // - Push TraceEntry to trace
-        // - Increment step index
+        // Access cache memory block
+        const memoryBlock = this.sequence[this.currentStepIndex];
+        const accessResult = this.cacheMemory.access(memoryBlock);
+        const accessTime = accessResult.accessTimeNs;
+
+        // Update metrics
+        this.simulationStatistics.totalAccesses++;
+        if (accessResult.isHit) {
+            this.simulationStatistics.hits++;
+        } else {
+            this.simulationStatistics.misses++;
+        }
+        this.simulationStatistics.totalMemoryAccessTimeNs += accessTime;
+
+        // Trace entry
+        const traceEntry: TraceEntry = {
+            step: this.currentStepIndex,
+            organization: this.organization,
+            memoryBlock: memoryBlock,
+            cacheLineIndex: accessResult.cacheLineIndex,
+            tag: accessResult.tag,
+            isHit: accessResult.isHit,
+            evictedBlock: accessResult.evictedMemoryBlock,
+            explanation: accessResult.actionDescription,
+            snapshot: accessResult.snapshot,
+            accessTimeNs: accessTime,
+        };
+        this.traceEntries.push(traceEntry);
+
+        // Next step
+        this.currentStepIndex++;
+
         return false;
     }
 
