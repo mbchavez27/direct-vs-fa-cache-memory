@@ -78,6 +78,10 @@ export class CacheSimulator {
     }
 
     public step(): boolean {
+        if (this.isFinished()) {
+            return false;
+        }
+
         // Access cache memory block
         const memoryBlock = this.sequence[this.currentStepIndex];
         const accessResult = this.cacheMemory.access(memoryBlock);
@@ -110,13 +114,11 @@ export class CacheSimulator {
         // Next step
         this.currentStepIndex++;
 
-        return false;
+        return true;
     }
 
     public runToEnd() {
-        while (!this.isFinished()) {
-            this.step();
-        }
+        while (this.step()) {}
     }
 
     public isFinished(): boolean {
