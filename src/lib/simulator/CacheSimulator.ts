@@ -78,6 +78,10 @@ export class CacheSimulator {
     }
 
     public step(): boolean {
+        if (this.sequence.length === 0) {
+            throw new Error("No sequence loaded.");
+        }
+
         if (this.isFinished()) {
             return false;
         }
@@ -98,7 +102,7 @@ export class CacheSimulator {
 
         // Trace entry
         const traceEntry: TraceEntry = {
-            step: this.currentStepIndex,
+            step: accessResult.step,
             organization: this.organization,
             memoryBlock: memoryBlock,
             cacheLineIndex: accessResult.cacheLineIndex,

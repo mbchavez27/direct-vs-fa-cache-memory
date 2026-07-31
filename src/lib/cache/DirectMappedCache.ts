@@ -31,8 +31,6 @@ export class DirectMappedCache {
             throw new RangeError(validationError);
         }
 
-        this.currentStep++;
-
         const cacheLineIndex = memoryBlock % this.config.cacheBlockCount;
         const tag = Math.floor(memoryBlock / this.config.cacheBlockCount);
         const line = this.lines[cacheLineIndex];
@@ -46,13 +44,13 @@ export class DirectMappedCache {
         if (isHit) {
             line.lastUsedStep = this.currentStep;
             actionDescription = `Block ${memoryBlock} found in direct-mapped cache line ${cacheLineIndex}.`;
-        } else if (this.config.readPolicy === "load-through") {
+        } else if (this.config.readPolicy === "non-load-through") {
             if (line.valid) {
                 evictedMemoryBlock = line.memoryBlock;
                 replacementOccurred = true;
-                actionDescription = `Miss. Replaced block ${evictedMemoryBlock} in line ${cacheLineIndex} with block ${memoryBlock}.`;
+                actionDescription = `Miss. Replaced main memory block ${evictedMemoryBlock} in cache line ${cacheLineIndex} with main memory block ${memoryBlock}.`;
             } else {
-                actionDescription = `Miss. Placed block ${memoryBlock} in empty line ${cacheLineIndex}.`;
+                actionDescription = `Miss. Placed main memory block ${memoryBlock} in empty cache line ${cacheLineIndex}.`;
             }
 
             line.valid = true;
@@ -60,11 +58,13 @@ export class DirectMappedCache {
             line.tag = tag;
             line.lastUsedStep = this.currentStep;
         } else {
-            actionDescription = `Miss. Non-load-through policy left cache line ${cacheLineIndex} unchanged.`;
+            actionDescription = `Miss. Load-through policy left cache line ${cacheLineIndex} unchanged.`;
         }
 
+        this.currentStep++;
+
         return {
-            step: this.currentStep,
+            step: this.currentStep - 1,
             memoryBlock,
             isHit: isHit,
             cacheLineIndex,
