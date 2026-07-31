@@ -114,7 +114,9 @@ export class CacheSimulator {
     }
 
     public runToEnd() {
-        // TODO: Step until sequence is finished
+        while (!this.isFinished()) {
+            this.step();
+        }
     }
 
     public isFinished(): boolean {
