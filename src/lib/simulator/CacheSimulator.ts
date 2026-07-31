@@ -15,7 +15,7 @@ export class CacheSimulator {
     private config: CacheConfig;
     private organization: CacheOrganization;
 
-    // TODO: Define private state variables (cache instance, sequence, trace, metrics)
+    // State variables
     private cacheMemory: DirectMappedCache | FullyAssociativeMRUCache;
     private simulationStatistics: SimulationStatistics;
     private sequence: number[];
@@ -25,14 +25,32 @@ export class CacheSimulator {
     constructor(organization: CacheOrganization, config: CacheConfig) {
         this.organization = organization;
         this.config = config;
-        this.reset();
+
+        if (this.organization === "Direct-Mapped") {
+            this.cacheMemory = new DirectMappedCache(this.config);
+        } else {
+            // Full Associative (MRU)
+            this.cacheMemory = new FullyAssociativeMRUCache(this.config);
+        }
+
+        this.simulationStatistics = {
+            totalAccesses: 0,
+            hits: 0,
+            misses: 0,
+            hitRate: 0,
+            missRate: 0,
+            averageMemoryAccessTimeNs: 0,
+            totalMemoryAccessTimeNs: 0,
+        };
+        this.currentStepIndex = 0;
+        this.traceEntries = [];
+        this.sequence = [];
     }
 
     public loadSequence(sequence: number[]) {
-        // TODO: Load sequence and reset state
         const errors = validateAccessSequence(sequence);
         if (errors.length > 0) {
-            return errors;
+            throw new Error(`Invalid sequence: ${errors.join(" ")}`);
         }
 
         this.sequence = sequence;
@@ -40,8 +58,6 @@ export class CacheSimulator {
     }
 
     public reset() {
-        // TODO: Initialize/Reset cache instance based on organization and config
-        // TODO: Reset all metrics and sequence position
         if (this.organization === "Direct-Mapped") {
             this.cacheMemory = new DirectMappedCache(this.config);
         } else {
@@ -76,12 +92,10 @@ export class CacheSimulator {
     }
 
     public isFinished(): boolean {
-        // TODO: Return true if all sequence elements are processed
-        return true;
+        return this.currentStepIndex >= this.sequence.length;
     }
 
     public getCurrentStep(): number {
-        // TODO: Return current step index
         return this.currentStepIndex;
     }
 
@@ -91,12 +105,10 @@ export class CacheSimulator {
     }
 
     public getTrace(): TraceEntry[] {
-        // TODO: Return full trace
-        return this.traceEntries;
+        return [...this.traceEntries];
     }
 
     public getStatistics(): SimulationStatistics {
-        // TODO: Return calculateMetrics result
         this.simulationStatistics = calculateMetrics(
             this.config,
             this.simulationStatistics.totalAccesses,
