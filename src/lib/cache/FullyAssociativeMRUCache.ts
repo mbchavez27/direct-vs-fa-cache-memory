@@ -1,5 +1,11 @@
-import type { AccessResult, CacheConfig, CacheLine, CacheSnapshot } from './types';
-import { getAccessTime } from '../statistics/timing';
+import type {
+    AccessResult,
+    CacheConfig,
+    CacheLine,
+    CacheSnapshot,
+} from "./types";
+import { validateConfiguration, validateMemoryBlock } from "./validation";
+import { getAccessTime } from "../statistics/timing";
 
 export class FullyAssociativeMRUCache {
     private config: CacheConfig;
@@ -7,25 +13,41 @@ export class FullyAssociativeMRUCache {
     private currentStep: number = 0;
 
     constructor(config: CacheConfig) {
+        const errors = validateConfiguration(config);
+        if (errors.length > 0) {
+            throw new Error(`Invalid cache configuration: ${errors.join(" ")}`);
+        }
+
         this.config = config;
         this.lines = Array.from({ length: config.cacheBlockCount }, (_, i) => ({
             lineIndex: i,
             valid: false,
             memoryBlock: null,
             tag: null,
-            lastUsedStep: 0
+            lastUsedStep: 0,
         }));
     }
 
     public access(memoryBlock: number): AccessResult {
+        const validationError = validateMemoryBlock(
+            memoryBlock,
+            this.config.mainMemoryBlockCount,
+        );
+        if (validationError !== null) {
+            throw new RangeError(validationError);
+        }
+
         this.currentStep++;
-        
+
         let targetLineIndex = -1;
         let isHit = false;
 
         // Search for a hit
         for (let i = 0; i < this.lines.length; i++) {
-            if (this.lines[i].valid && this.lines[i].memoryBlock === memoryBlock) {
+            if (
+                this.lines[i].valid &&
+                this.lines[i].memoryBlock === memoryBlock
+            ) {
                 targetLineIndex = i;
                 isHit = true;
                 break;
@@ -78,7 +100,12 @@ export class FullyAssociativeMRUCache {
             this.lines[targetLineIndex].lastUsedStep = this.currentStep;
         }
 
-        const accessTimeNs = getAccessTime(isHit, this.config.readPolicy, this.config.cacheAccessTimeNs, this.config.memoryAccessTimeNs);
+        const accessTimeNs = getAccessTime(
+            isHit,
+            this.config.readPolicy,
+            this.config.cacheAccessTimeNs,
+            this.config.memoryAccessTimeNs,
+        );
 
         return {
             step: this.currentStep,
@@ -91,13 +118,13 @@ export class FullyAssociativeMRUCache {
             replacementOccurred,
             actionDescription,
             snapshot: this.getSnapshot(),
-            accessTimeNs
+            accessTimeNs,
         };
     }
 
     public getSnapshot(): CacheSnapshot {
         return {
-            lines: this.lines.map(line => ({ ...line }))
+            lines: this.lines.map((line) => ({ ...line })),
         };
     }
 }
