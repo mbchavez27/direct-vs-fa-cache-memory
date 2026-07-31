@@ -1,11 +1,15 @@
-import type { SimulationStatistics } from "../cache/types";
+import type {
+    CacheConfig,
+    ReadPolicy,
+    SimulationStatistics,
+} from "../cache/types";
+import { getAccessTime } from "./timing";
 
 export function calculateMetrics(
+    config: CacheConfig,
     totalAccesses: number,
     hits: number,
     misses: number,
-    cacheAccessTimeNs: number,
-    memoryAccessTimeNs: number,
     totalMemoryAccessTimeNs: number,
 ): SimulationStatistics {
     // TODO: Calculate hitRate, missRate, and averageMemoryAccessTimeNs
@@ -18,9 +22,15 @@ export function calculateMetrics(
         missRate = misses / totalAccesses;
     }
 
+    let missPenalty = getAccessTime(
+        false,
+        config.readPolicy,
+        config.cacheAccessTimeNs,
+        config.memoryAccessTimeNs,
+    );
     // T_avg = hC + (1-h)*M
     let averageMemoryAccessTimeNs =
-        hitRate * cacheAccessTimeNs + missRate * memoryAccessTimeNs;
+        hitRate * config.cacheAccessTimeNs + missRate * missPenalty;
 
     return {
         totalAccesses,
