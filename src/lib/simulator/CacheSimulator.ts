@@ -1,75 +1,165 @@
-import type { CacheConfig, CacheOrganization, CacheSnapshot, SimulationResult, SimulationStatistics, TraceEntry } from '../cache/types';
-import { DirectMappedCache } from '../cache/DirectMappedCache';
-import { FullyAssociativeMRUCache } from '../cache/FullyAssociativeMRUCache';
-import { calculateMetrics } from '../statistics/metrics';
+import type {
+    CacheConfig,
+    CacheOrganization,
+    CacheSnapshot,
+    SimulationResult,
+    SimulationStatistics,
+    TraceEntry,
+} from "../cache/types";
+import { DirectMappedCache } from "../cache/DirectMappedCache";
+import { FullyAssociativeMRUCache } from "../cache/FullyAssociativeMRUCache";
+import { calculateMetrics } from "../statistics/metrics";
+import { validateAccessSequence } from "$lib/cache/validation";
 
 export class CacheSimulator {
     private config: CacheConfig;
     private organization: CacheOrganization;
-    
-    // TODO: Define private state variables (cache instance, sequence, trace, metrics)
+
+    // State variables
+    private cacheMemory: DirectMappedCache | FullyAssociativeMRUCache;
+    private simulationStatistics: SimulationStatistics;
+    private sequence: number[];
+    private currentStepIndex: number;
+    private traceEntries: TraceEntry[];
 
     constructor(organization: CacheOrganization, config: CacheConfig) {
         this.organization = organization;
         this.config = config;
-        this.reset();
+
+        if (this.organization === "Direct-Mapped") {
+            this.cacheMemory = new DirectMappedCache(this.config);
+        } else {
+            // Full Associative (MRU)
+            this.cacheMemory = new FullyAssociativeMRUCache(this.config);
+        }
+
+        this.simulationStatistics = {
+            totalAccesses: 0,
+            hits: 0,
+            misses: 0,
+            hitRate: 0,
+            missRate: 0,
+            averageMemoryAccessTimeNs: 0,
+            totalMemoryAccessTimeNs: 0,
+        };
+        this.currentStepIndex = 0;
+        this.traceEntries = [];
+        this.sequence = [];
     }
 
     public loadSequence(sequence: number[]) {
-        // TODO: Load sequence and reset state
+        const errors = validateAccessSequence(sequence);
+        if (errors.length > 0) {
+            throw new Error(`Invalid sequence: ${errors.join(" ")}`);
+        }
+
+        this.sequence = sequence;
+        this.reset();
     }
 
     public reset() {
-        // TODO: Initialize/Reset cache instance based on organization and config
-        // TODO: Reset all metrics and sequence position
+        if (this.organization === "Direct-Mapped") {
+            this.cacheMemory = new DirectMappedCache(this.config);
+        } else {
+            // Full Associative (MRU)
+            this.cacheMemory = new FullyAssociativeMRUCache(this.config);
+        }
+        this.simulationStatistics = {
+            totalAccesses: 0,
+            hits: 0,
+            misses: 0,
+            hitRate: 0,
+            missRate: 0,
+            averageMemoryAccessTimeNs: 0,
+            totalMemoryAccessTimeNs: 0,
+        };
+        this.currentStepIndex = 0;
+        this.traceEntries = [];
     }
 
     public step(): boolean {
-        // TODO: Process one memory access step
-        // - Get current memory block
-        // - Access cache
-        // - Update metrics
-        // - Push TraceEntry to trace
-        // - Increment step index
-        return false;
-    }
+        if (this.sequence.length === 0) {
+            throw new Error("No sequence loaded.");
+        }
 
-    public runToEnd() {
-        // TODO: Step until sequence is finished
-    }
+        if (this.isFinished()) {
+            return false;
+        }
 
-    public isFinished(): boolean {
-        // TODO: Return true if all sequence elements are processed
+        // Access cache memory block
+        const memoryBlock = this.sequence[this.currentStepIndex];
+        const accessResult = this.cacheMemory.access(memoryBlock);
+        const accessTime = accessResult.accessTimeNs;
+
+        // Update metrics
+        this.simulationStatistics.totalAccesses++;
+        if (accessResult.isHit) {
+            this.simulationStatistics.hits++;
+        } else {
+            this.simulationStatistics.misses++;
+        }
+        this.simulationStatistics.totalMemoryAccessTimeNs += accessTime;
+
+        // Trace entry
+        const traceEntry: TraceEntry = {
+            step: accessResult.step,
+            organization: this.organization,
+            memoryBlock: memoryBlock,
+            cacheLineIndex: accessResult.cacheLineIndex,
+            tag: accessResult.tag,
+            isHit: accessResult.isHit,
+            evictedBlock: accessResult.evictedMemoryBlock,
+            explanation: accessResult.actionDescription,
+            snapshot: accessResult.snapshot,
+            accessTimeNs: accessTime,
+        };
+        this.traceEntries.push(traceEntry);
+
+        // Next step
+        this.currentStepIndex++;
+
         return true;
     }
 
+    public runToEnd() {
+        while (this.step()) {}
+    }
+
+    public isFinished(): boolean {
+        return this.currentStepIndex >= this.sequence.length;
+    }
+
     public getCurrentStep(): number {
-        // TODO: Return current step index
-        return 0;
+        return this.currentStepIndex;
     }
 
     public getCurrentSnapshot(): CacheSnapshot {
-        // TODO: Return current snapshot from cache
-        return { lines: [] };
+        const snapshot = this.cacheMemory.getSnapshot();
+        return { lines: snapshot.lines };
     }
 
     public getTrace(): TraceEntry[] {
-        // TODO: Return full trace
-        return [];
+        return [...this.traceEntries];
     }
 
     public getStatistics(): SimulationStatistics {
-        // TODO: Return calculateMetrics result
-        return calculateMetrics(0, 0, 0, 0);
+        this.simulationStatistics = calculateMetrics(
+            this.config,
+            this.simulationStatistics.totalAccesses,
+            this.simulationStatistics.hits,
+            this.simulationStatistics.misses,
+            this.simulationStatistics.totalMemoryAccessTimeNs,
+        );
+        return this.simulationStatistics;
     }
-    
+
     public getSimulationResult(): SimulationResult {
         return {
             organization: this.organization,
             config: this.config,
             trace: this.getTrace(),
             statistics: this.getStatistics(),
-            finalSnapshot: this.getCurrentSnapshot()
+            finalSnapshot: this.getCurrentSnapshot(),
         };
     }
 }
