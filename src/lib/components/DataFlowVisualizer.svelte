@@ -1,10 +1,6 @@
 <script lang="ts">
-	import { onDestroy } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import type { CacheLine, TraceEntry, CacheConfig } from '$lib/cache/types';
-	import gsap from 'gsap';
-	import { MotionPathPlugin } from 'gsap/MotionPathPlugin';
-
-	gsap.registerPlugin(MotionPathPlugin);
 
 	let { trace, cacheLines, config, label = 'Direct-Mapped' }: {
 		trace: TraceEntry | null;
@@ -14,7 +10,8 @@
 	} = $props();
 
 	let svgEl: SVGSVGElement | undefined = $state(undefined);
-	let timeline: gsap.core.Timeline | null = null;
+	let timeline: ReturnType<typeof import('gsap').gsap.timeline> | null = null;
+	let gsap: typeof import('gsap').gsap | null = null;
 
 	const SVG_WIDTH = 900;
 	const SVG_HEIGHT = 420;
@@ -36,6 +33,13 @@
 			CACHE.y + 15 + i * lineHeight + lineHeight / 2
 		)
 	);
+
+	onMount(async () => {
+		const gsapModule = await import('gsap');
+		const { MotionPathPlugin } = await import('gsap/MotionPathPlugin');
+		gsapModule.default.registerPlugin(MotionPathPlugin);
+		gsap = gsapModule.default;
+	});
 
 	function getCacheLineY(lineIndex: number): number {
 		if (lineIndex >= 0 && lineIndex < cacheLinesY.length) {
@@ -107,7 +111,7 @@
 	}
 
 	function flashCacheLine(lineIndex: number, color: string) {
-		if (!svgEl || lineIndex < 0 || lineIndex >= cacheLinesY.length) return;
+		if (!gsap || !svgEl || lineIndex < 0 || lineIndex >= cacheLinesY.length) return;
 
 		const ns = 'http://www.w3.org/2000/svg';
 		const y = cacheLinesY[lineIndex];
@@ -128,7 +132,7 @@
 	}
 
 	function showStatus(text: string, color: string) {
-		if (!svgEl) return;
+		if (!gsap || !svgEl) return null;
 
 		const ns = 'http://www.w3.org/2000/svg';
 		const g = document.createElementNS(ns, 'g');
@@ -166,7 +170,7 @@
 	}
 
 	function animateHit(entry: TraceEntry) {
-		if (!svgEl) return;
+		if (!gsap || !svgEl) return;
 
 		const statusEl = showStatus('HIT', '#16a34a');
 
@@ -202,7 +206,7 @@
 	}
 
 	function animateMissEmpty(entry: TraceEntry) {
-		if (!svgEl) return;
+		if (!gsap || !svgEl) return;
 
 		const statusEl = showStatus('MISS', '#dc2626');
 
@@ -238,7 +242,7 @@
 	}
 
 	function animateMissEviction(entry: TraceEntry) {
-		if (!svgEl || entry.evictedBlock === null) return;
+		if (!gsap || !svgEl || entry.evictedBlock === null) return;
 
 		const statusEl = showStatus('EVICT', '#d97706');
 

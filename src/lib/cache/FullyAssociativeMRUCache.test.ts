@@ -17,7 +17,7 @@ describe('FullyAssociativeMRUCache', () => {
         cache.access(10);
         
         const hitResult = cache.access(10);
-        expect(hitResult.hit).toBe(true);
+        expect(hitResult.isHit).toBe(true);
         expect(hitResult.cacheLineIndex).toBe(0);
     });
 
@@ -50,7 +50,7 @@ describe('FullyAssociativeMRUCache', () => {
         
         // Next access should evict MRU (40 in line 3)
         const r5 = cache.access(50);
-        expect(r5.miss).toBe(true);
+        expect(r5.isHit).toBe(false);
         expect(r5.replacementOccurred).toBe(true);
         expect(r5.evictedMemoryBlock).toBe(40);
         expect(r5.cacheLineIndex).toBe(3);
@@ -60,7 +60,7 @@ describe('FullyAssociativeMRUCache', () => {
         
         // Next miss should evict 20 from line 1
         const r7 = cache.access(60);
-        expect(r7.miss).toBe(true);
+        expect(r7.isHit).toBe(false);
         expect(r7.replacementOccurred).toBe(true);
         expect(r7.evictedMemoryBlock).toBe(20);
         expect(r7.cacheLineIndex).toBe(1);
