@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { TestCaseType, ReadPolicy, CacheConfig } from '$lib/cache/types';
+	import type { TestCaseType, CacheConfig } from '$lib/cache/types';
 	import { generateSequential } from '$lib/generators/sequential';
 	import { generateMidRepeat } from '$lib/generators/midRepeat';
 	import { generateRandom } from '$lib/generators/random';

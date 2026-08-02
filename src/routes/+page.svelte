@@ -1,7 +1,6 @@
 <script lang="ts">
 	import type { CacheConfig, CacheLine, SimulationStatistics, TraceEntry, TestCaseType } from '$lib/cache/types';
 	import { CacheSimulator } from '$lib/simulator/CacheSimulator';
-	import { validateConfiguration } from '$lib/cache/validation';
 	import ControlBar from '$lib/components/ControlBar.svelte';
 	import CachePanel from '$lib/components/CachePanel.svelte';
 	import TraceLog from '$lib/components/TraceLog.svelte';
@@ -11,7 +10,7 @@
 		blockSizeWords: 2,
 		cacheBlockCount: 8,
 		mainMemoryBlockCount: 1024,
-		readPolicy: 'load-through',
+		readPolicy: 'non-load-through',
 		cacheAccessTimeNs: 1,
 		memoryAccessTimeNs: 10,
 	});
@@ -40,7 +39,7 @@
 		totalAccesses: 0, hits: 0, misses: 0, hitRate: 0, missRate: 0, averageMemoryAccessTimeNs: 0, totalMemoryAccessTimeNs: 0,
 	});
 
-	let playInterval = $state<ReturnType<typeof setInterval> | null>(null);
+	let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
 	function createEmptyLines(count: number): CacheLine[] {
 		return Array.from({ length: count }, (_, i) => ({
@@ -66,6 +65,18 @@
 		return true;
 	}
 
+	function scheduleNext() {
+		if (!isPlaying) return;
+		timeoutId = setTimeout(() => {
+			const ok = doStep();
+			if (!ok || !isPlaying) {
+				stopPlayback();
+				return;
+			}
+			scheduleNext();
+		}, playbackSpeed);
+	}
+
 	function handleLoadSequence(seq: number[]) {
 		stopPlayback();
 		sequence = seq;
@@ -88,12 +99,7 @@
 	function handlePlay() {
 		if (isPlaying) return;
 		isPlaying = true;
-		playInterval = setInterval(() => {
-			const ok = doStep();
-			if (!ok) {
-				stopPlayback();
-			}
-		}, playbackSpeed);
+		scheduleNext();
 	}
 
 	function handlePause() {
@@ -102,9 +108,9 @@
 
 	function stopPlayback() {
 		isPlaying = false;
-		if (playInterval !== null) {
-			clearInterval(playInterval);
-			playInterval = null;
+		if (timeoutId !== null) {
+			clearTimeout(timeoutId);
+			timeoutId = null;
 		}
 	}
 
@@ -126,34 +132,24 @@
 		}
 	}
 
-	$effect(() => {
-		if (isPlaying && playInterval !== null) {
-			clearInterval(playInterval);
-			playInterval = setInterval(() => {
-				const ok = doStep();
-				if (!ok) {
-					stopPlayback();
-				}
-			}, playbackSpeed);
-		}
-	});
-
-	let currentDmHighlight = $derived(() => {
+	let dmHighlight = $derived.by(() => {
 		if (dmTrace.length === 0) return { hitLine: -1, evictionLine: -1, highlightedLine: -1 };
 		const last = dmTrace[dmTrace.length - 1];
-		const hitLine = last.isHit ? last.cacheLineIndex : -1;
-		const evictionLine = last.evictedBlock !== null ? last.cacheLineIndex : -1;
-		const highlightedLine = !last.isHit ? last.cacheLineIndex : -1;
-		return { hitLine, evictionLine, highlightedLine };
+		return {
+			hitLine: last.isHit ? last.cacheLineIndex : -1,
+			evictionLine: last.evictedBlock !== null ? last.cacheLineIndex : -1,
+			highlightedLine: !last.isHit ? last.cacheLineIndex : -1,
+		};
 	});
 
-	let currentFaHighlight = $derived(() => {
+	let faHighlight = $derived.by(() => {
 		if (faTrace.length === 0) return { hitLine: -1, evictionLine: -1, highlightedLine: -1 };
 		const last = faTrace[faTrace.length - 1];
-		const hitLine = last.isHit ? last.cacheLineIndex : -1;
-		const evictionLine = last.evictedBlock !== null ? last.cacheLineIndex : -1;
-		const highlightedLine = !last.isHit ? last.cacheLineIndex : -1;
-		return { hitLine, evictionLine, highlightedLine };
+		return {
+			hitLine: last.isHit ? last.cacheLineIndex : -1,
+			evictionLine: last.evictedBlock !== null ? last.cacheLineIndex : -1,
+			highlightedLine: !last.isHit ? last.cacheLineIndex : -1,
+		};
 	});
 </script>
 
@@ -192,24 +188,24 @@
 		/>
 
 		<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-			<CachePanel
-				title="Direct-Mapped"
-				lines={dmSnapshot}
-				stats={dmStats}
-				hitLine={currentDmHighlight().hitLine}
-				evictionLine={currentDmHighlight().evictionLine}
-				highlightedLine={currentDmHighlight().highlightedLine}
-				showLastUsed={false}
-			/>
-			<CachePanel
-				title="Fully Associative (MRU)"
-				lines={faSnapshot}
-				stats={faStats}
-				hitLine={currentFaHighlight().hitLine}
-				evictionLine={currentFaHighlight().evictionLine}
-				highlightedLine={currentFaHighlight().highlightedLine}
-				showLastUsed={true}
-			/>
+		<CachePanel
+			title="Direct-Mapped"
+			lines={dmSnapshot}
+			stats={dmStats}
+			hitLine={dmHighlight.hitLine}
+			evictionLine={dmHighlight.evictionLine}
+			highlightedLine={dmHighlight.highlightedLine}
+			showLastUsed={false}
+		/>
+		<CachePanel
+			title="Fully Associative (MRU)"
+			lines={faSnapshot}
+			stats={faStats}
+			hitLine={faHighlight.hitLine}
+			evictionLine={faHighlight.evictionLine}
+			highlightedLine={faHighlight.highlightedLine}
+			showLastUsed={true}
+		/>
 		</div>
 
 		<TraceLog
