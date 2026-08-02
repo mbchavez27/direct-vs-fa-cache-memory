@@ -5,6 +5,8 @@
 	import CachePanel from '$lib/components/CachePanel.svelte';
 	import TraceLog from '$lib/components/TraceLog.svelte';
 	import ConfigModal from '$lib/components/ConfigModal.svelte';
+	import DataFlowVisualizer from '$lib/components/DataFlowVisualizer.svelte';
+	import SequenceBar from '$lib/components/SequenceBar.svelte';
 
 	let cacheConfig = $state<CacheConfig>({
 		blockSizeWords: 2,
@@ -180,11 +182,17 @@
 			bind:currentStep
 			bind:totalSteps
 			bind:playbackSpeed
+			{sequence}
 			onPlay={handlePlay}
 			onPause={handlePause}
 			onStep={handleStep}
 			onReset={handleReset}
 			onLoadSequence={handleLoadSequence}
+		/>
+
+		<SequenceBar
+			{sequence}
+			{currentStep}
 		/>
 
 		<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -206,6 +214,21 @@
 			highlightedLine={faHighlight.highlightedLine}
 			showLastUsed={true}
 		/>
+		</div>
+
+		<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+			<DataFlowVisualizer
+				trace={dmTrace.length > 0 ? dmTrace[dmTrace.length - 1] : null}
+				cacheLines={dmSnapshot}
+				config={cacheConfig}
+				label="Direct-Mapped"
+			/>
+			<DataFlowVisualizer
+				trace={faTrace.length > 0 ? faTrace[faTrace.length - 1] : null}
+				cacheLines={faSnapshot}
+				config={cacheConfig}
+				label="Fully Associative (MRU)"
+			/>
 		</div>
 
 		<TraceLog
