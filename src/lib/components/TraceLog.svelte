@@ -1,5 +1,7 @@
 <script lang="ts">
 	import type { TraceEntry } from '$lib/cache/types';
+	import { fly } from 'svelte/transition';
+	import { quintOut } from 'svelte/easing';
 
 	let { dmTrace, faTrace, currentStep }: {
 		dmTrace: TraceEntry[];
@@ -43,10 +45,13 @@
 				</tr>
 			</thead>
 			<tbody>
-				{#each dmTrace as dmEntry, i}
+				{#each dmTrace as dmEntry, i (dmEntry.step)}
 					{@const faEntry = faTrace[i]}
 					{@const isActive = dmEntry.step === currentStep}
-					<tr class="border-t {isActive ? 'bg-blue-50' : i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}">
+					<tr
+						class="border-t {isActive ? 'bg-blue-50' : i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}"
+						in:fly={{ y: 20, duration: 200, easing: quintOut }}
+					>
 						<td class="px-2 py-1 text-gray-500">{dmEntry.step}</td>
 						<td class="px-2 py-1 font-semibold">{dmEntry.memoryBlock}</td>
 						<td class="px-2 py-1 text-center">

@@ -386,6 +386,14 @@ _Add comparison between Direct-Mapped and Fully Associative MRU._
 - Export simulation reports
 - Add graphical performance comparison
 - Support custom user-defined memory sequences
+- **Data Flow Visualization (Manim-style)**
+  - Create `DataFlowVisualizer.svelte` component
+  - Draw CPU, Cache (with lines), Main Memory as labeled regions
+  - Animate data blocks traveling between components on each access
+  - Show hit/miss visually (block reaches cache or bounces back)
+  - Show eviction (old block leaves cache, new block enters)
+  - Libraries needed: `fabric.js`, `GSAP`, or Canvas API
+  - Complexity: ~300-500 lines
 
 ---
 
