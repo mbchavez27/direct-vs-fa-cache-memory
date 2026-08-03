@@ -12,7 +12,6 @@
 	} = $props();
 
 	let localConfig = $state({ ...config });
-	let dialogEl: HTMLDivElement | undefined = $state(undefined);
 
 	$effect(() => {
 		if (!open) return;
@@ -25,7 +24,7 @@
 		}
 
 		window.addEventListener('keydown', onKeyDown);
-		dialogEl?.focus();
+		document.getElementById('config-dialog')?.focus();
 
 		return () => {
 			window.removeEventListener('keydown', onKeyDown);
@@ -49,6 +48,7 @@
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div class="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onclick={handleCancel} role="presentation">
 		<div
+			id="config-dialog"
 			class="bg-white rounded-xl shadow-xl border border-gray-200 p-6 w-full max-w-md"
 			onclick={(e) => e.stopPropagation()}
 			role="dialog"

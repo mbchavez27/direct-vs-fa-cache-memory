@@ -155,6 +155,39 @@
 			highlightedLine: !last.isHit ? last.cacheLineIndex : -1,
 		};
 	});
+
+	$effect(() => {
+		if (sequence.length <= 0) return;
+
+		function onKeyDown(e: KeyboardEvent) {
+			if (showConfig) return;
+
+			const isSpace = e.key === ' ' || e.key === 'Space' || e.code === 'Space';
+
+			if (isSpace) {
+				e.preventDefault();
+				if (isPlaying) { handlePause(); }
+				else { handlePlay(); }
+				return;
+			}
+			if (e.key === 'ArrowRight') {
+				e.preventDefault;
+				handleStep();
+				return;
+			}
+			if (e.key === 'R' || e.key === 'r') {
+				e.preventDefault();
+				handleReset();
+			}
+		}
+
+		window.addEventListener('keydown', onKeyDown);
+		document.getElementById('config-dialog')?.focus();
+
+		return () => {
+			window.removeEventListener('keydown', onKeyDown);
+		};
+	});
 </script>
 
 <svelte:head>
