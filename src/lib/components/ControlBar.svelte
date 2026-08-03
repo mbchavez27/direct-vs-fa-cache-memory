@@ -66,14 +66,14 @@
 	}
 </script>
 
-<div class="bg-white rounded-lg border border-gray-200 p-3">
+<div class="bg-[#161b22] rounded-lg border border-gray-200 p-3">
 	<div class="flex flex-wrap items-end gap-3">
 		<div class="flex flex-col gap-1">
 			<label for="preset-select" class="text-xs font-medium text-gray-600">Preset</label>
 			<select
 				id="preset-select"
 				bind:value={selectedPreset}
-				class="border border-gray-300 rounded px-2 py-1.5 text-sm bg-white"
+				class="border border-[#30363d] rounded px-2 py-1.5 text-sm bg-[#21262d] text-[#c9d1d9]"
 			>
 				{#each presets as preset}
 					<option value={preset}>{preset}</option>
@@ -96,7 +96,7 @@
 
 		<button
 			onclick={handleLoad}
-			class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-3 py-1.5 rounded transition-colors"
+			class="bg-[#1f6feb]/20 hover:bg-[#1f6feb]/35 text-[#58a6ff] border border-[#1f6feb]/40 text-sm font-medium px-3 py-1.5 rounded transition-colors"
 		>
 			Load
 		</button>
@@ -107,7 +107,7 @@
 			{#if isPlaying}
 				<button
 					onclick={onPause}
-					class="bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-medium px-3 py-1.5 rounded transition-colors"
+					class="bg-[#d29922]/20 hover:bg-[#d29922]/35 text-[#d29922] border border-[#d29922]/40 text-sm font-medium px-3 py-1.5 rounded transition-colors"
 					title="Pause"
 				>
 					Pause
@@ -116,7 +116,7 @@
 				<button
 					onclick={onPlay}
 					disabled={totalSteps === 0 || currentStep >= totalSteps}
-					class="bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-sm font-medium px-3 py-1.5 rounded transition-colors"
+					class="bg-[#238636]/20 hover:bg-[#238636]/35 disabled:opacity-40 disabled:cursor-not-allowed text-[#3fb950] border border-[#238636]/40 text-sm font-medium px-3 py-1.5 rounded transition-colors"
 					title="Play"
 				>
 					Play
@@ -126,7 +126,7 @@
 			<button
 				onclick={onStep}
 				disabled={isPlaying || totalSteps === 0 || currentStep >= totalSteps}
-				class="bg-gray-600 hover:bg-gray-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-sm font-medium px-3 py-1.5 rounded transition-colors"
+				class="bg-[#21262d] hover:bg-[#30363d] disabled:opacity-40 disabled:cursor-not-allowed text-[#c9d1d9] border border-[#30363d] text-sm font-medium px-3 py-1.5 rounded transition-colors"
 				title="Step"
 			>
 				Step
@@ -134,14 +134,14 @@
 
 			<button
 				onclick={onReset}
-				class="bg-red-500 hover:bg-red-600 text-white text-sm font-medium px-3 py-1.5 rounded transition-colors"
+				class="bg-[#da3633]/20 hover:bg-[#da3633]/35 text-[#f85149] border border-[#f85149]/40 text-sm font-medium px-3 py-1.5 rounded transition-colors"
 				title="Reset"
 			>
 				Reset
 			</button>
 		</div>
 
-		<div class="flex flex-col gap-1">
+		<div class="flex flex-col gap-2">
 			<label for="speed-slider" class="text-xs font-medium text-gray-600">Speed ({playbackSpeed}ms)</label>
 			<input
 				id="speed-slider"
@@ -150,7 +150,20 @@
 				max="2000"
 				step="50"
 				bind:value={playbackSpeed}
-				class="w-24"
+				class="w-24 h-1.5 bg-[#21262d] rounded-lg appearance-none cursor-pointer border border-[#30363d]
+					[&::-webkit-slider-thumb]:appearance-none 
+					[&::-webkit-slider-thumb]:w-3 
+					[&::-webkit-slider-thumb]:h-3.5 
+					[&::-webkit-slider-thumb]:rounded 
+					[&::-webkit-slider-thumb]:bg-[#161b22] 
+					[&::-webkit-slider-thumb]:border 
+					[&::-webkit-slider-thumb]:border-[#58a6ff] 
+					[&::-moz-range-thumb]:w-3 
+					[&::-moz-range-thumb]:h-3.5 
+					[&::-moz-range-thumb]:rounded 
+					[&::-moz-range-thumb]:bg-[#161b22] 
+					[&::-moz-range-thumb]:border 
+					[&::-moz-range-thumb]:border-[#58a6ff]"
 			/>
 		</div>
 

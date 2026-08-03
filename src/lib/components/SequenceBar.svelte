@@ -26,7 +26,7 @@
 			<span class="text-xs text-gray-400">({sequence.length} accesses)</span>
 		</div>
 
-		<div bind:this={scrollEl} class="flex items-center gap-1 overflow-x-auto pb-2 scrollbar-thin">
+		<div bind:this={scrollEl} class="flex items-center gap-1 overflow-x-auto overflow-y-hidden py-3 px-1 scrollbar-thin">
 			{#each sequence as block, i}
 				<div
 					class="flex-shrink-0 flex items-center"
@@ -43,7 +43,7 @@
 					>
 						{block}
 						{#if i === currentStep}
-							<div class="absolute -bottom-3 left-1/2 -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-blue-600"></div>
+							<div class="absolute -bottom-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[3px] border-r-[3px] border-t-[4px] border-transparent border-t-blue-600"></div>
 						{/if}
 					</div>
 					{#if i < sequence.length - 1}
