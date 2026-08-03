@@ -10,8 +10,8 @@
 	let scrollEl: HTMLDivElement | undefined = $state(undefined);
 
 	$effect(() => {
-		if (scrollEl && currentStep >= 0) {
-			const block = scrollEl.children[currentStep] as HTMLElement;
+		if (scrollEl && currentStep > 0) {
+			const block = scrollEl.children[currentStep - 1] as HTMLElement;
 			if (block) {
 				const scrollLeft = block.offsetLeft - scrollEl.clientWidth / 2 + block.clientWidth / 2;
 				scrollEl.scrollTo({ left: scrollLeft, behavior: 'smooth' });
@@ -35,15 +35,15 @@
 				>
 					<div
 						class="relative flex items-center justify-center w-10 h-8 rounded font-mono text-xs font-bold transition-all duration-200
-							{i === currentStep
+							{i === currentStep - 1
 								? 'bg-blue-600 text-white shadow-lg scale-110 ring-2 ring-blue-300'
-								: i < currentStep
+								: i < currentStep - 1
 									? 'bg-gray-200 text-gray-500'
 									: 'bg-gray-100 text-gray-700 border border-gray-300'
 							}"
 					>
 						{block}
-						{#if i === currentStep}
+						{#if i === currentStep - 1}
 							<div class="absolute -bottom-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[3px] border-r-[3px] border-t-[4px] border-transparent border-t-blue-600"></div>
 						{/if}
 					</div>
@@ -70,8 +70,8 @@
 				</div>
 			</div>
 			<div class="text-xs text-gray-500 font-mono">
-				Accessing block <span class="font-bold text-blue-700">{sequence[currentStep] ?? '-'}</span>
-				at index <span class="font-bold">{currentStep}</span>
+				Last accessed block <span class="font-bold text-blue-700">{currentStep > 0 ? sequence[currentStep - 1] : '—'}</span>
+				at index <span class="font-bold">{currentStep > 0 ? currentStep - 1 : '—'}</span>
 			</div>
 		</div>
 	</div>

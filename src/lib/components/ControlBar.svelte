@@ -171,35 +171,35 @@
 			{#if sequence.length > 0}
 				<div class="flex items-center gap-1 text-xs">
 					<span class="text-gray-500">Block:</span>
-					<span class="font-mono font-bold text-blue-700 text-sm">{sequence[currentStep] ?? '-'}</span>
+					<span class="font-mono font-bold text-blue-700 text-sm">{sequence[currentStep - 1] ?? '-'}</span>
 					<span class="text-gray-400 mx-1">|</span>
 					<span class="text-gray-500">Seq:</span>
 					<span class="font-mono text-gray-600">
 						{#if sequence.length <= 7}
 							{#each sequence as block, i}
-								{#if i === currentStep}
+								{#if i === currentStep - 1}
 									<span class="text-blue-700 font-bold">[{block}]</span>
 								{:else}
-									<span class:text-gray-400={i < currentStep}>{block}</span>
+									<span class:text-gray-400={i < currentStep - 1}>{block}</span>
 								{/if}
 								{#if i < sequence.length - 1}<span class="text-gray-400"> → </span>{/if}
 							{/each}
 						{:else}
 							{#each sequence.slice(0, 3) as block, i}
-								{#if i === currentStep}
+								{#if i === currentStep - 1}
 									<span class="text-blue-700 font-bold">[{block}]</span>
 								{:else}
-									<span class:text-gray-400={i < currentStep}>{block}</span>
+									<span class:text-gray-400={i < currentStep - 1}>{block}</span>
 								{/if}
 								<span class="text-gray-400"> → </span>
 							{/each}
 							<span class="text-gray-400">... </span>
-							{#if currentStep >= 3}
-								<span class="text-blue-700 font-bold">[{sequence[currentStep]}]</span>
+							{#if currentStep - 1 >= 3}
+								<span class="text-blue-700 font-bold">[{sequence[currentStep - 1]}]</span>
 							{/if}
 							<span class="text-gray-400"> → </span>
 							{#each sequence.slice(-2) as block, i}
-								{#if currentStep === sequence.length - 2 + i}
+								{#if currentStep - 1 === sequence.length - 2 + i}
 									<span class="text-blue-700 font-bold">[{block}]</span>
 								{:else}
 									<span>{block}</span>
