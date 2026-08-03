@@ -13,6 +13,7 @@
 	const tweenedHitRate = tweened(0, { duration: 200, easing: quintOut });
 	const tweenedMissRate = tweened(0, { duration: 200, easing: quintOut });
 	const tweenedAMAT = tweened(0, { duration: 200, easing: quintOut });
+	const tweenedTotalTime = tweened(0, { duration: 200, easing: quintOut });
 
 	$effect(() => {
 		tweenedHits.set(stats.hits);
@@ -20,6 +21,7 @@
 		tweenedHitRate.set(stats.hitRate * 100);
 		tweenedMissRate.set(stats.missRate * 100);
 		tweenedAMAT.set(stats.averageMemoryAccessTimeNs);
+		tweenedTotalTime.set(stats.totalMemoryAccessTimeNs);
 	});
 </script>
 
@@ -45,6 +47,10 @@
 		<div class="col-span-2 flex justify-between border-t border-gray-100 pt-1 mt-1">
 			<span class="text-gray-500">AMAT:</span>
 			<span class="font-mono font-bold text-blue-700">{$tweenedAMAT.toFixed(2)} ns</span>
+		</div>
+		<div class="col-span-2 flex justify-between border-t border-gray-100 pt-1 mt-1">
+			<span class="text-gray-500">Total Access Time:</span>
+			<span class="font-mono font-bold text-blue-700">{$tweenedTotalTime.toFixed(2)} ns</span>
 		</div>
 	</div>
 </div>
