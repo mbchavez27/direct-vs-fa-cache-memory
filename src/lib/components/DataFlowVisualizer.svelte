@@ -211,51 +211,51 @@
 		return g;
 	}
 
-	function animateHit(entry: TraceEntry) {
-		const layer = getLayer();
-		if (!gsap || !layer || entry.evictedBlock === null) return;
+function animateHit(entry: TraceEntry) {
+    const layer = getLayer();
+    if (!gsap || !layer || !entry.isHit) return;
 
-		const cpu = getCPURightEdge();
-		const cachePt = getCacheEntryPoint(entry.cacheLineIndex);
+    const cpu = getCPURightEdge();
+    const cachePt = getCacheEntryPoint(entry.cacheLineIndex);
 
-		const pulse = createPulse(cpu.x, cpu.y, cachePt.x, cachePt.y);
-		layer.appendChild(pulse);
+    const pulse = createPulse(cpu.x, cpu.y, cachePt.x, cachePt.y);
+    layer.appendChild(pulse);
 
-		timeline = gsap.timeline();
-		timeline
-			.to(pulse, { attr: { x2: cachePt.x, y2: cachePt.y }, opacity: 0.3, duration: 0.2, ease: 'power2.out' })
-			.call(() => removeElement(pulse))
-			.call(() => flashCacheLine(entry.cacheLineIndex, '#86efac'))
-			.call(() => { showStatus('HIT', '#16a34a'); }, undefined, '+=0.15');
+    timeline = gsap.timeline();
+    timeline
+        .to(pulse, { attr: { x2: cachePt.x, y2: cachePt.y }, opacity: 0.3, duration: 0.2, ease: 'power2.out' })
+        .call(() => removeElement(pulse))
+        .call(() => flashCacheLine(entry.cacheLineIndex, '#86efac'))
+        .call(() => { showStatus('HIT', '#16a34a'); }, undefined, '+=0.1');
 
-		const mem = getMemoryCenter();
-		const block = createBlock(mem.x, mem.y, entry.memoryBlock, '#bbf7d0');
-		layer.appendChild(block);
+    const mem = getMemoryCenter();
+    const block = createBlock(mem.x, mem.y, entry.memoryBlock, '#bbf7d0');
+    layer.appendChild(block);
 
-		const pathD = `M${mem.x},${mem.y} C${(mem.x + cachePt.x) / 2},${mem.y - 60} ${(mem.x + cachePt.x) / 2},${cachePt.y + 60} ${cachePt.x},${cachePt.y}`;
+    const pathD = `M${mem.x},${mem.y} C${(mem.x + cachePt.x) / 2},${mem.y - 60} ${(mem.x + cachePt.x) / 2},${cachePt.y + 60} ${cachePt.x},${cachePt.y}`;
 
-		const trail = createTrail(mem.x, mem.y);
-		layer.appendChild(trail);
+    const trail = createTrail(mem.x, mem.y);
+    layer.appendChild(trail);
 
-		timeline
-			.fromTo(block, { opacity: 0, scale: 0.3, transformOrigin: 'center center' }, { opacity: 1, scale: 1, duration: 0.2, ease: 'back.out(1.7)' })
-			.to(trail, { attr: { x2: cachePt.x, y2: cachePt.y }, opacity: 0, duration: 0.5, ease: 'power2.inOut' }, '-=0.05')
-			.to(block, {
-				motionPath: { path: pathD, align: pathD, alignOrigin: [0.5, 0.5] },
-				duration: 0.5,
-				ease: 'power3.inOut'
-			}, '-=0.5')
-			.call(() => {
-				flashCacheLine(entry.cacheLineIndex, '#22c55e');
-				removeElement(trail);
-			})
-			.to(block, { scale: 1.15, duration: 0.1, ease: 'power2.out', transformOrigin: 'center center' })
-			.to(block, { scale: 1, duration: 0.1, ease: 'power2.in', transformOrigin: 'center center' })
-			.to(block, { opacity: 0, duration: 0.25, ease: 'power2.in' })
-			.call(() => {
-				removeElement(block);
-			});
-	}
+	timeline
+		.fromTo(block, { opacity: 0, scale: 0.3, transformOrigin: 'center center' }, { opacity: 1, scale: 1, duration: 0.2, ease: 'back.out(1.7)' })
+		.to(trail, { attr: { x2: cachePt.x, y2: cachePt.y }, opacity: 0, duration: 0.5, ease: 'power2.inOut' }, '-=0.05')
+		.to(block, {
+			motionPath: { path: pathD, align: pathD, alignOrigin: [0.5, 0.5] },
+			duration: 0.5,
+			ease: 'power3.inOut'
+		}, '-=0.5')
+		.call(() => {
+			flashCacheLine(entry.cacheLineIndex, '#22c55e');
+			removeElement(trail);
+		})
+		.to(block, { scale: 1.15, duration: 0.1, ease: 'power2.out', transformOrigin: 'center center' })
+		.to(block, { scale: 1, duration: 0.1, ease: 'power2.in', transformOrigin: 'center center' })
+		.to(block, { opacity: 0, duration: 0.25, ease: 'power2.in' })
+		.call(() => {
+			removeElement(block);
+		});
+}
 
 	function animateMissEmpty(entry: TraceEntry) {
 		const layer = getLayer();
