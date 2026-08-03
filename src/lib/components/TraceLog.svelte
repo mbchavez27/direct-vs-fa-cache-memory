@@ -36,7 +36,7 @@
 			</thead>
 			<tbody>
 				{#each trace as entry, i (entry.step)}
-					{@const isActive = entry.step === currentStep}
+					{@const isActive = i === currentStep - 1}
 					<tr
 						class="border-t {isActive ? 'bg-blue-50' : i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}"
 						in:fly={{ y: 20, duration: 200, easing: quintOut }}
