@@ -31,8 +31,10 @@
 
 	let dmTrace = $state<TraceEntry[]>([]);
 	let faTrace = $state<TraceEntry[]>([]);
-	let dmSnapshot = $state<CacheLine[]>([]);
-	let faSnapshot = $state<CacheLine[]>([]);
+	// svelte-ignore state_referenced_locally
+	let dmSnapshot = $state<CacheLine[]>(createEmptyLines(cacheConfig.cacheBlockCount));
+	// svelte-ignore state_referenced_locally
+	let faSnapshot = $state<CacheLine[]>(createEmptyLines(cacheConfig.cacheBlockCount));
 
 	let dmStats = $state<SimulationStatistics>({
 		totalAccesses: 0, hits: 0, misses: 0, hitRate: 0, missRate: 0, averageMemoryAccessTimeNs: 0, totalMemoryAccessTimeNs: 0,
