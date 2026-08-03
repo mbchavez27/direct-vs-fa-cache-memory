@@ -205,59 +205,65 @@
 			onLoadSequence={handleLoadSequence}
 		/>
 
-		<SequenceBar
-			{sequence}
-			{currentStep}
-		/>
-
-		<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-		<CachePanel
-			title="Direct-Mapped"
-			lines={dmSnapshot}
-			stats={dmStats}
-			hitLine={dmHighlight.hitLine}
-			evictionLine={dmHighlight.evictionLine}
-			highlightedLine={dmHighlight.highlightedLine}
-			showLastUsed={false}
-		/>
-		<CachePanel
-			title="Fully Associative (MRU)"
-			lines={faSnapshot}
-			stats={faStats}
-			hitLine={faHighlight.hitLine}
-			evictionLine={faHighlight.evictionLine}
-			highlightedLine={faHighlight.highlightedLine}
-			showLastUsed={true}
-		/>
-		</div>
-
-		<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-			<DataFlowVisualizer
-				trace={dmTrace.length > 0 ? dmTrace[dmTrace.length - 1] : null}
-				cacheLines={dmSnapshot}
-				config={cacheConfig}
-				label="Direct-Mapped"
-			/>
-			<DataFlowVisualizer
-				trace={faTrace.length > 0 ? faTrace[faTrace.length - 1] : null}
-				cacheLines={faSnapshot}
-				config={cacheConfig}
-				label="Fully Associative (MRU)"
-			/>
-		</div>
-
-		<div class="grid grid-cols-2 gap-4">
-			<TraceLog
-				trace={dmTrace}
+		{#if sequence.length > 0}
+			<SequenceBar
+				{sequence}
 				{currentStep}
-				label="Direct-Mapped"
 			/>
-			<TraceLog
-				trace={faTrace}
-				{currentStep}
-				label="Fully Associative (MRU)"
+		{:else}
+			<h1 class="text-xl font-bold text-gray-900">No sequence loaded — choose a preset and press Load</h1>
+		{/if}
+			<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+			<CachePanel
+				title="Direct-Mapped"
+				lines={dmSnapshot}
+				stats={dmStats}
+				hitLine={dmHighlight.hitLine}
+				evictionLine={dmHighlight.evictionLine}
+				highlightedLine={dmHighlight.highlightedLine}
+				showLastUsed={false}
 			/>
-		</div>
+			<CachePanel
+				title="Fully Associative (MRU)"
+				lines={faSnapshot}
+				stats={faStats}
+				hitLine={faHighlight.hitLine}
+				evictionLine={faHighlight.evictionLine}
+				highlightedLine={faHighlight.highlightedLine}
+				showLastUsed={true}
+			/>
+			</div>
+
+
+			<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+				<DataFlowVisualizer
+					trace={dmTrace.length > 0 ? dmTrace[dmTrace.length - 1] : null}
+					cacheLines={dmSnapshot}
+					config={cacheConfig}
+					label="Direct-Mapped"
+				/>
+				<DataFlowVisualizer
+					trace={faTrace.length > 0 ? faTrace[faTrace.length - 1] : null}
+					cacheLines={faSnapshot}
+					config={cacheConfig}
+					label="Fully Associative (MRU)"
+				/>
+			</div>
+			{#if sequence.length > 0}
+			<div class="grid grid-cols-2 gap-4">
+				<TraceLog
+					trace={dmTrace}
+					{currentStep}
+					label="Direct-Mapped"
+				/>
+				<TraceLog
+					trace={faTrace}
+					{currentStep}
+					label="Fully Associative (MRU)"
+				/>
+			</div>
+			{/if}
+
 	</div>
 </div>
 
