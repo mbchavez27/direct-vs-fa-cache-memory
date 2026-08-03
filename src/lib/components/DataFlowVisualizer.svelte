@@ -12,21 +12,25 @@
 	let svgEl: SVGSVGElement | undefined = $state(undefined);
 	let timeline: ReturnType<typeof import('gsap').gsap.timeline> | null = null;
 	let gsap: typeof import('gsap').gsap | null = null;
+	let activeElements: Element[] = [];
 
 	const SVG_WIDTH = 900;
-	const SVG_HEIGHT = 420;
-
-	const CPU = { x: 50, y: 170, w: 110, h: 70 };
-	const MEMORY = { x: 740, y: 170, w: 110, h: 70 };
+	const MIN_LINE_HEIGHT = 28;
+	const CACHE_TOP_PADDING = 60;
+	const CACHE_BOTTOM_PADDING = 100;
 
 	const cacheBlockCount = $derived(config.cacheBlockCount);
-	const lineHeight = $derived(Math.min(32, (300 - 50) / cacheBlockCount));
+	const lineHeight = $derived(MIN_LINE_HEIGHT);
 	const CACHE = $derived({
 		x: 380,
-		y: 60,
+		y: CACHE_TOP_PADDING,
 		w: 160,
-		h: Math.max(100, cacheBlockCount * lineHeight + 30)
+		h: cacheBlockCount * lineHeight + 30
 	});
+	const SVG_HEIGHT = $derived(CACHE_TOP_PADDING + CACHE.h + CACHE_BOTTOM_PADDING);
+
+	const CPU = $derived({ x: 50, y: CACHE.y + CACHE.h / 2 - 35, w: 110, h: 70 });
+	const MEMORY = $derived({ x: 740, y: CACHE.y + CACHE.h / 2 - 35, w: 110, h: 70 });
 
 	const cacheLinesY = $derived(
 		Array.from({ length: cacheBlockCount }, (_, i) =>
@@ -94,6 +98,18 @@
 		if (el && el.parentNode) {
 			el.parentNode.removeChild(el);
 		}
+	}
+
+	function trackElement<T extends Element>(el: T): T {
+		activeElements.push(el);
+		return el;
+	}
+
+	function cleanupAll() {
+		for (const el of activeElements) {
+			removeElement(el);
+		}
+		activeElements = [];
 	}
 
 	function createTrail(x: number, y: number): SVGLineElement {
@@ -173,15 +189,16 @@
 		if (!gsap || !svgEl) return;
 
 		const statusEl = showStatus('HIT', '#16a34a');
+		if (statusEl) trackElement(statusEl);
 
 		const mem = getMemoryCenter();
 		const cachePt = getCacheEntryPoint(entry.cacheLineIndex);
-		const block = createBlock(mem.x, mem.y, entry.memoryBlock, '#bbf7d0');
+		const block = trackElement(createBlock(mem.x, mem.y, entry.memoryBlock, '#bbf7d0'));
 		svgEl.appendChild(block);
 
 		const pathD = `M${mem.x},${mem.y} C${(mem.x + cachePt.x) / 2},${mem.y - 60} ${(mem.x + cachePt.x) / 2},${cachePt.y + 60} ${cachePt.x},${cachePt.y}`;
 
-		const trail = createTrail(mem.x, mem.y);
+		const trail = trackElement(createTrail(mem.x, mem.y));
 		svgEl.appendChild(trail);
 
 		timeline = gsap.timeline();
@@ -209,15 +226,16 @@
 		if (!gsap || !svgEl) return;
 
 		const statusEl = showStatus('MISS', '#dc2626');
+		if (statusEl) trackElement(statusEl);
 
 		const mem = getMemoryCenter();
 		const cachePt = getCacheEntryPoint(entry.cacheLineIndex);
-		const block = createBlock(mem.x, mem.y, entry.memoryBlock, '#fecaca');
+		const block = trackElement(createBlock(mem.x, mem.y, entry.memoryBlock, '#fecaca'));
 		svgEl.appendChild(block);
 
 		const pathD = `M${mem.x},${mem.y} C${(mem.x + cachePt.x) / 2},${mem.y - 60} ${(mem.x + cachePt.x) / 2},${cachePt.y + 60} ${cachePt.x},${cachePt.y}`;
 
-		const trail = createTrail(mem.x, mem.y);
+		const trail = trackElement(createTrail(mem.x, mem.y));
 		svgEl.appendChild(trail);
 
 		timeline = gsap.timeline();
@@ -245,21 +263,22 @@
 		if (!gsap || !svgEl || entry.evictedBlock === null) return;
 
 		const statusEl = showStatus('EVICT', '#d97706');
+		if (statusEl) trackElement(statusEl);
 
 		const exitPt = getCacheExitPoint(entry.cacheLineIndex);
-		const oldBlock = createBlock(exitPt.x, exitPt.y, entry.evictedBlock, '#fde68a');
+		const oldBlock = trackElement(createBlock(exitPt.x, exitPt.y, entry.evictedBlock, '#fde68a'));
 		svgEl.appendChild(oldBlock);
 
 		const flyOutY = exitPt.y - 100;
 
 		const mem = getMemoryCenter();
 		const cachePt = getCacheEntryPoint(entry.cacheLineIndex);
-		const newBlock = createBlock(mem.x, mem.y, entry.memoryBlock, '#fecaca');
+		const newBlock = trackElement(createBlock(mem.x, mem.y, entry.memoryBlock, '#fecaca'));
 		svgEl.appendChild(newBlock);
 
 		const pathD = `M${mem.x},${mem.y} C${(mem.x + cachePt.x) / 2},${mem.y - 60} ${(mem.x + cachePt.x) / 2},${cachePt.y + 60} ${cachePt.x},${cachePt.y}`;
 
-		const trail = createTrail(mem.x, mem.y);
+		const trail = trackElement(createTrail(mem.x, mem.y));
 		svgEl.appendChild(trail);
 
 		timeline = gsap.timeline();
@@ -289,6 +308,7 @@
 		if (timeline) {
 			timeline.kill();
 		}
+		cleanupAll();
 
 		if (entry.isHit) {
 			animateHit(entry);
@@ -306,47 +326,38 @@
 		}
 	});
 
+	$effect(() => {
+		if (trace === null) {
+			if (timeline) {
+				timeline.kill();
+				timeline = null;
+			}
+			cleanupAll();
+		}
+	});
+
 	onDestroy(() => {
 		if (timeline) {
 			timeline.kill();
 		}
+		cleanupAll();
 	});
 </script>
 
-<div class="bg-white rounded-lg border border-gray-200 p-4 overflow-hidden">
+<div class="bg-white rounded-lg border border-gray-200 p-4 overflow-y-auto max-h-[600px]">
 	<h3 class="text-base font-bold text-gray-800 uppercase tracking-wide mb-3">{label} — Data Flow</h3>
 
 	<svg
 		bind:this={svgEl}
 		viewBox="0 0 {SVG_WIDTH} {SVG_HEIGHT}"
 		class="w-full h-auto"
-		style="max-height: 420px;"
 	>
 		<defs>
-			<marker id="arrow-{label}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-auto">
-				<path d="M 0 0 L 10 5 L 0 10 z" fill="#9ca3af" />
-			</marker>
 			<filter id="block-glow" x="-50%" y="-50%" width="200%" height="200%">
 				<feGaussianBlur stdDeviation="3" result="blur" />
 				<feComposite in="SourceGraphic" in2="blur" operator="over" />
 			</filter>
 		</defs>
-
-		<!-- Path lines -->
-		<path
-			d="M{CPU.x + CPU.w},{CPU.y + CPU.h / 2} L{CACHE.x},{CACHE.y + CACHE.h / 2}"
-			stroke="#d1d5db"
-			stroke-width="2"
-			fill="none"
-			marker-end="url(#arrow-{label})"
-		/>
-		<path
-			d="M{MEMORY.x},{MEMORY.y + MEMORY.h / 2} L{CACHE.x + CACHE.w},{CACHE.y + CACHE.h / 2}"
-			stroke="#d1d5db"
-			stroke-width="2"
-			fill="none"
-			marker-end="url(#arrow-{label})"
-		/>
 
 		<!-- CPU Box -->
 		<rect x={CPU.x} y={CPU.y} width={CPU.w} height={CPU.h} rx="10" fill="#dbeafe" stroke="#3b82f6" stroke-width="2.5" />

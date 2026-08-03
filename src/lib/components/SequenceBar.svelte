@@ -13,7 +13,8 @@
 		if (scrollEl && currentStep >= 0) {
 			const block = scrollEl.children[currentStep] as HTMLElement;
 			if (block) {
-				block.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+				const scrollLeft = block.offsetLeft - scrollEl.clientWidth / 2 + block.clientWidth / 2;
+				scrollEl.scrollTo({ left: scrollLeft, behavior: 'smooth' });
 			}
 		}
 	});
