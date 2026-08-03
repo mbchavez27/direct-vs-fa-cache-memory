@@ -12,11 +12,10 @@
 	let svgEl: SVGSVGElement | undefined = $state(undefined);
 	let timeline: ReturnType<typeof import('gsap').gsap.timeline> | null = null;
 	let gsap: typeof import('gsap').gsap | null = null;
-	let activeElements: Element[] = [];
 
 	const SVG_WIDTH = 900;
 	const MIN_LINE_HEIGHT = 28;
-	const CACHE_TOP_PADDING = 60;
+	const CACHE_TOP_PADDING = 110;
 	const CACHE_BOTTOM_PADDING = 100;
 
 	const cacheBlockCount = $derived(config.cacheBlockCount);
@@ -69,11 +68,11 @@
 		const g = document.createElementNS(ns, 'g');
 
 		const rect = document.createElementNS(ns, 'rect');
-		rect.setAttribute('x', String(x - 20));
-		rect.setAttribute('y', String(y - 13));
-		rect.setAttribute('width', '40');
-		rect.setAttribute('height', '26');
-		rect.setAttribute('rx', '5');
+		rect.setAttribute('x', String(x - 28));
+		rect.setAttribute('y', String(y - 17));
+		rect.setAttribute('width', '56');
+		rect.setAttribute('height', '34');
+		rect.setAttribute('rx', '7');
 		rect.setAttribute('fill', color);
 		rect.setAttribute('stroke', '#374151');
 		rect.setAttribute('stroke-width', '2');
@@ -84,7 +83,7 @@
 		text.setAttribute('x', String(x));
 		text.setAttribute('y', String(y + 5));
 		text.setAttribute('text-anchor', 'middle');
-		text.setAttribute('font-size', '12');
+		text.setAttribute('font-size', '14');
 		text.setAttribute('font-family', 'monospace');
 		text.setAttribute('font-weight', 'bold');
 		text.setAttribute('fill', '#1f2937');
@@ -100,16 +99,17 @@
 		}
 	}
 
-	function trackElement<T extends Element>(el: T): T {
-		activeElements.push(el);
-		return el;
+	function getAnimatedLayer(): SVGGElement | null {
+		return svgEl?.querySelector('#animated-layer-' + label) ?? null;
 	}
 
 	function cleanupAll() {
-		for (const el of activeElements) {
-			removeElement(el);
+		const layer = getAnimatedLayer();
+		if (layer) {
+			while (layer.firstChild) {
+				layer.removeChild(layer.firstChild);
+			}
 		}
-		activeElements = [];
 	}
 
 	function createTrail(x: number, y: number): SVGLineElement {
@@ -127,7 +127,8 @@
 	}
 
 	function flashCacheLine(lineIndex: number, color: string) {
-		if (!gsap || !svgEl || lineIndex < 0 || lineIndex >= cacheLinesY.length) return;
+		const layer = getAnimatedLayer();
+		if (!gsap || !layer || lineIndex < 0 || lineIndex >= cacheLinesY.length) return;
 
 		const ns = 'http://www.w3.org/2000/svg';
 		const y = cacheLinesY[lineIndex];
@@ -139,7 +140,7 @@
 		rect.setAttribute('rx', '4');
 		rect.setAttribute('fill', color);
 		rect.setAttribute('opacity', '0.8');
-		svgEl.appendChild(rect);
+		layer.appendChild(rect);
 
 		gsap.fromTo(rect,
 			{ opacity: 0.8, scale: 1, transformOrigin: 'center center' },
@@ -148,34 +149,40 @@
 	}
 
 	function showStatus(text: string, color: string) {
-		if (!gsap || !svgEl) return null;
+		const layer = getAnimatedLayer();
+		if (!gsap || !layer) return null;
 
 		const ns = 'http://www.w3.org/2000/svg';
 		const g = document.createElementNS(ns, 'g');
 
+		const boxW = 180;
+		const boxH = 44;
+		const boxX = CACHE.x + CACHE.w / 2 - boxW / 2;
+		const boxY = CACHE.y - 52;
+
 		const bg = document.createElementNS(ns, 'rect');
-		bg.setAttribute('x', String(SVG_WIDTH / 2 - 70));
-		bg.setAttribute('y', '10');
-		bg.setAttribute('width', '140');
-		bg.setAttribute('height', '36');
-		bg.setAttribute('rx', '8');
+		bg.setAttribute('x', String(boxX));
+		bg.setAttribute('y', String(boxY));
+		bg.setAttribute('width', String(boxW));
+		bg.setAttribute('height', String(boxH));
+		bg.setAttribute('rx', '10');
 		bg.setAttribute('fill', 'white');
 		bg.setAttribute('stroke', color);
-		bg.setAttribute('stroke-width', '2.5');
+		bg.setAttribute('stroke-width', '3');
 		g.appendChild(bg);
 
 		const textEl = document.createElementNS(ns, 'text');
-		textEl.setAttribute('x', String(SVG_WIDTH / 2));
-		textEl.setAttribute('y', '34');
+		textEl.setAttribute('x', String(boxX + boxW / 2));
+		textEl.setAttribute('y', String(boxY + boxH / 2 + 7));
 		textEl.setAttribute('text-anchor', 'middle');
-		textEl.setAttribute('font-size', '18');
+		textEl.setAttribute('font-size', '22');
 		textEl.setAttribute('font-weight', 'bold');
 		textEl.setAttribute('font-family', 'monospace');
 		textEl.setAttribute('fill', color);
 		textEl.textContent = text;
 		g.appendChild(textEl);
 
-		svgEl.appendChild(g);
+		layer.appendChild(g);
 
 		gsap.fromTo(g,
 			{ opacity: 0, y: -10 },
@@ -186,20 +193,20 @@
 	}
 
 	function animateHit(entry: TraceEntry) {
-		if (!gsap || !svgEl) return;
+		const layer = getAnimatedLayer();
+		if (!gsap || !layer) return;
 
 		const statusEl = showStatus('HIT', '#16a34a');
-		if (statusEl) trackElement(statusEl);
 
 		const mem = getMemoryCenter();
 		const cachePt = getCacheEntryPoint(entry.cacheLineIndex);
-		const block = trackElement(createBlock(mem.x, mem.y, entry.memoryBlock, '#bbf7d0'));
-		svgEl.appendChild(block);
+		const block = createBlock(mem.x, mem.y, entry.memoryBlock, '#bbf7d0');
+		layer.appendChild(block);
 
 		const pathD = `M${mem.x},${mem.y} C${(mem.x + cachePt.x) / 2},${mem.y - 60} ${(mem.x + cachePt.x) / 2},${cachePt.y + 60} ${cachePt.x},${cachePt.y}`;
 
-		const trail = trackElement(createTrail(mem.x, mem.y));
-		svgEl.appendChild(trail);
+		const trail = createTrail(mem.x, mem.y);
+		layer.appendChild(trail);
 
 		timeline = gsap.timeline();
 		timeline
@@ -223,20 +230,20 @@
 	}
 
 	function animateMissEmpty(entry: TraceEntry) {
-		if (!gsap || !svgEl) return;
+		const layer = getAnimatedLayer();
+		if (!gsap || !layer) return;
 
 		const statusEl = showStatus('MISS', '#dc2626');
-		if (statusEl) trackElement(statusEl);
 
 		const mem = getMemoryCenter();
 		const cachePt = getCacheEntryPoint(entry.cacheLineIndex);
-		const block = trackElement(createBlock(mem.x, mem.y, entry.memoryBlock, '#fecaca'));
-		svgEl.appendChild(block);
+		const block = createBlock(mem.x, mem.y, entry.memoryBlock, '#fecaca');
+		layer.appendChild(block);
 
 		const pathD = `M${mem.x},${mem.y} C${(mem.x + cachePt.x) / 2},${mem.y - 60} ${(mem.x + cachePt.x) / 2},${cachePt.y + 60} ${cachePt.x},${cachePt.y}`;
 
-		const trail = trackElement(createTrail(mem.x, mem.y));
-		svgEl.appendChild(trail);
+		const trail = createTrail(mem.x, mem.y);
+		layer.appendChild(trail);
 
 		timeline = gsap.timeline();
 		timeline
@@ -260,26 +267,26 @@
 	}
 
 	function animateMissEviction(entry: TraceEntry) {
-		if (!gsap || !svgEl || entry.evictedBlock === null) return;
+		const layer = getAnimatedLayer();
+		if (!gsap || !layer || entry.evictedBlock === null) return;
 
 		const statusEl = showStatus('EVICT', '#d97706');
-		if (statusEl) trackElement(statusEl);
 
 		const exitPt = getCacheExitPoint(entry.cacheLineIndex);
-		const oldBlock = trackElement(createBlock(exitPt.x, exitPt.y, entry.evictedBlock, '#fde68a'));
-		svgEl.appendChild(oldBlock);
+		const oldBlock = createBlock(exitPt.x - 50, exitPt.y, entry.evictedBlock, '#fde68a');
+		layer.appendChild(oldBlock);
 
-		const flyOutY = exitPt.y - 100;
+		const flyOutY = exitPt.y - 120;
 
 		const mem = getMemoryCenter();
 		const cachePt = getCacheEntryPoint(entry.cacheLineIndex);
-		const newBlock = trackElement(createBlock(mem.x, mem.y, entry.memoryBlock, '#fecaca'));
-		svgEl.appendChild(newBlock);
+		const newBlock = createBlock(mem.x, mem.y, entry.memoryBlock, '#fecaca');
+		layer.appendChild(newBlock);
 
 		const pathD = `M${mem.x},${mem.y} C${(mem.x + cachePt.x) / 2},${mem.y - 60} ${(mem.x + cachePt.x) / 2},${cachePt.y + 60} ${cachePt.x},${cachePt.y}`;
 
-		const trail = trackElement(createTrail(mem.x, mem.y));
-		svgEl.appendChild(trail);
+		const trail = createTrail(mem.x, mem.y);
+		layer.appendChild(trail);
 
 		timeline = gsap.timeline();
 		timeline
@@ -359,13 +366,15 @@
 			</filter>
 		</defs>
 
+		<g id="animated-layer-{label}"></g>
+
 		<!-- CPU Box -->
 		<rect x={CPU.x} y={CPU.y} width={CPU.w} height={CPU.h} rx="10" fill="#dbeafe" stroke="#3b82f6" stroke-width="2.5" />
 		<text x={CPU.x + CPU.w / 2} y={CPU.y + CPU.h / 2 + 5} text-anchor="middle" font-size="16" font-weight="bold" fill="#1e40af">CPU</text>
 
 		<!-- Cache Box -->
 		<rect x={CACHE.x} y={CACHE.y} width={CACHE.w} height={CACHE.h} rx="10" fill="#f0fdf4" stroke="#22c55e" stroke-width="2.5" />
-		<text x={CACHE.x + CACHE.w / 2} y={CACHE.y - 8} text-anchor="middle" font-size="13" font-weight="bold" fill="#166534">Cache ({cacheBlockCount} lines)</text>
+		<text x={CACHE.x + CACHE.w / 2} y={CACHE.y - 68} text-anchor="middle" font-size="18" font-weight="bold" fill="#166534">Cache ({cacheBlockCount} lines)</text>
 
 		<!-- Cache Lines -->
 		{#each cacheLines as line, i}
