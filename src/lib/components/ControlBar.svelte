@@ -210,12 +210,24 @@
 					</span>
 				</div>
 			{/if}
-			<div>
-				Step <span class="font-mono font-bold">{currentStep}</span> / <span class="font-mono">{totalSteps}</span>
+			<div class="flex items-center gap-2">
+				<div>
+					Step <span class="font-mono font-bold">{currentStep}</span> / <span class="font-mono">{totalSteps}</span>
+				</div>
+				{#if sequence.length > 0 && currentStep >= totalSteps}
+					<span
+						class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-green-200 text-green-800"
+						title="All steps executed"
+					>
+						<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+							<path d="M20 6 9 17l-5-5"/>
+						</svg>
+						Completed
+					</span>
+				{/if}
 			</div>
 		</div>
 	</div>
-
 	{#if error}
 		<div class="mt-2 text-xs text-red-600 bg-red-50 rounded px-2 py-1">{error}</div>
 	{/if}
