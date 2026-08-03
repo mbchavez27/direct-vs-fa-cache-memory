@@ -11,6 +11,17 @@
 	75% { transform: translateX(2px); }
 }
 
+/* no scrollbar */
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
 .animate-pulse-once {
 	animation: pulse-once 0.3s ease-in-out;
 }

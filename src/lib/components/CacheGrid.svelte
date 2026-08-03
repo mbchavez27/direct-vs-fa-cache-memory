@@ -20,7 +20,7 @@
 	}
 </script>
 
-<div class="overflow-auto max-h-[600px] rounded-lg border border-gray-300">
+<div class="overflow-auto max-h-[600px] rounded-lg border border-gray-300 no-scrollbar">
 	<table class="w-full text-xs font-mono">
 		<thead class="bg-gray-100 sticky top-0">
 			<tr>
