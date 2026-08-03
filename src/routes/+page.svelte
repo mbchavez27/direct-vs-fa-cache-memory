@@ -1,6 +1,8 @@
 <script lang="ts">
 	import type { CacheConfig, CacheLine, SimulationStatistics, TraceEntry, TestCaseType } from '$lib/cache/types';
 	import { CacheSimulator } from '$lib/simulator/CacheSimulator';
+	import { compareCaches } from '$lib/simulator/compareCaches';
+	import { formatComparisonToText } from '$lib/simulator/traceFormatter';
 	import ControlBar from '$lib/components/ControlBar.svelte';
 	import CachePanel from '$lib/components/CachePanel.svelte';
 	import TraceLog from '$lib/components/TraceLog.svelte';
@@ -136,6 +138,21 @@
 		}
 	}
 
+	function handleExport() {
+		if (sequence.length === 0) return;
+		const comparison = compareCaches(cacheConfig, sequence);
+		const text = formatComparisonToText(comparison);
+		const blob = new Blob([text], { type: 'text/plain' });
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = `cache-trace-${new Date().toISOString().slice(0, 10)}.txt`;
+		document.body.appendChild(a);
+		a.click();
+		a.remove();
+		URL.revokeObjectURL(url);
+	}
+
 	let dmHighlight = $derived.by(() => {
 		if (dmTrace.length === 0) return { hitLine: -1, evictionLine: -1, highlightedLine: -1 };
 		const last = dmTrace[dmTrace.length - 1];
@@ -160,7 +177,11 @@
 		if (sequence.length <= 0) return;
 
 		function onKeyDown(e: KeyboardEvent) {
+			if (e.metaKey || e.ctrlKey || e.altKey) return;
 			if (showConfig) return;
+
+			const target = e.target as HTMLElement | null;
+			if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable)) return;
 
 			const isSpace = e.key === ' ' || e.key === 'Space' || e.code === 'Space';
 
@@ -171,7 +192,7 @@
 				return;
 			}
 			if (e.key === 'ArrowRight') {
-				e.preventDefault;
+				e.preventDefault();
 				handleStep();
 				return;
 			}
@@ -182,7 +203,6 @@
 		}
 
 		window.addEventListener('keydown', onKeyDown);
-		document.getElementById('config-dialog')?.focus();
 
 		return () => {
 			window.removeEventListener('keydown', onKeyDown);
@@ -285,6 +305,21 @@
 				/>
 			</div>
 			{#if sequence.length > 0}
+			<div class="flex items-center justify-between">
+				<h3 class="text-sm font-bold text-gray-800 uppercase tracking-wide">Access Trace</h3>
+				<button
+					onclick={handleExport}
+					class="inline-flex items-center gap-1.5 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-medium px-3 py-1.5 rounded transition-colors"
+					title="Download full trace as plain text"
+				>
+					<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+						<polyline points="7 10 12 15 17 10"/>
+						<line x1="12" y1="15" x2="12" y2="3"/>
+					</svg>
+					<span>Export Trace (.txt)</span>
+				</button>
+			</div>
 			<div class="grid grid-cols-2 gap-4">
 				<TraceLog
 					trace={dmTrace}
