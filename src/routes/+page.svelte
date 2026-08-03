@@ -246,11 +246,18 @@
 			/>
 		</div>
 
-		<TraceLog
-			{dmTrace}
-			{faTrace}
-			{currentStep}
-		/>
+		<div class="grid grid-cols-2 gap-4">
+			<TraceLog
+				trace={dmTrace}
+				{currentStep}
+				label="Direct-Mapped"
+			/>
+			<TraceLog
+				trace={faTrace}
+				{currentStep}
+				label="Fully Associative (MRU)"
+			/>
+		</div>
 	</div>
 </div>
 
