@@ -10,12 +10,13 @@
 	} = $props();
 
 	let svgEl: SVGSVGElement | undefined = $state(undefined);
+	let layerEl: SVGGElement | undefined = $state(undefined);
 	let timeline: ReturnType<typeof import('gsap').gsap.timeline> | null = null;
 	let gsap: typeof import('gsap').gsap | null = null;
 
 	const SVG_WIDTH = 900;
-	const MIN_LINE_HEIGHT = 28;
-	const CACHE_TOP_PADDING = 110;
+	const MIN_LINE_HEIGHT = 34;
+	const CACHE_TOP_PADDING = 150;
 	const CACHE_BOTTOM_PADDING = 100;
 
 	const cacheBlockCount = $derived(config.cacheBlockCount);
@@ -23,13 +24,13 @@
 	const CACHE = $derived({
 		x: 380,
 		y: CACHE_TOP_PADDING,
-		w: 160,
+		w: 200,
 		h: cacheBlockCount * lineHeight + 30
 	});
 	const SVG_HEIGHT = $derived(CACHE_TOP_PADDING + CACHE.h + CACHE_BOTTOM_PADDING);
 
-	const CPU = $derived({ x: 50, y: CACHE.y + CACHE.h / 2 - 35, w: 110, h: 70 });
-	const MEMORY = $derived({ x: 740, y: CACHE.y + CACHE.h / 2 - 35, w: 110, h: 70 });
+	const CPU = $derived({ x: 50, y: CACHE.y + CACHE.h / 2 - 40, w: 130, h: 80 });
+	const MEMORY = $derived({ x: 740, y: CACHE.y + CACHE.h / 2 - 40, w: 130, h: 80 });
 
 	const cacheLinesY = $derived(
 		Array.from({ length: cacheBlockCount }, (_, i) =>
@@ -99,17 +100,35 @@
 		}
 	}
 
-	function getAnimatedLayer(): SVGGElement | null {
-		return svgEl?.querySelector('#animated-layer-' + label) ?? null;
+	function getLayer(): SVGGElement | null {
+		return layerEl ?? null;
 	}
 
 	function cleanupAll() {
-		const layer = getAnimatedLayer();
+		const layer = getLayer();
 		if (layer) {
 			while (layer.firstChild) {
 				layer.removeChild(layer.firstChild);
 			}
 		}
+	}
+
+	function getCPURightEdge(): { x: number; y: number } {
+		return { x: CPU.x + CPU.w, y: CPU.y + CPU.h / 2 };
+	}
+
+	function createPulse(fromX: number, fromY: number, toX: number, toY: number): SVGLineElement {
+		const ns = 'http://www.w3.org/2000/svg';
+		const line = document.createElementNS(ns, 'line');
+		line.setAttribute('x1', String(fromX));
+		line.setAttribute('y1', String(fromY));
+		line.setAttribute('x2', String(fromX));
+		line.setAttribute('y2', String(fromY));
+		line.setAttribute('stroke', '#3b82f6');
+		line.setAttribute('stroke-width', '3');
+		line.setAttribute('stroke-linecap', 'round');
+		line.setAttribute('opacity', '0.9');
+		return line;
 	}
 
 	function createTrail(x: number, y: number): SVGLineElement {
@@ -127,7 +146,7 @@
 	}
 
 	function flashCacheLine(lineIndex: number, color: string) {
-		const layer = getAnimatedLayer();
+		const layer = getLayer();
 		if (!gsap || !layer || lineIndex < 0 || lineIndex >= cacheLinesY.length) return;
 
 		const ns = 'http://www.w3.org/2000/svg';
@@ -149,7 +168,7 @@
 	}
 
 	function showStatus(text: string, color: string) {
-		const layer = getAnimatedLayer();
+		const layer = getLayer();
 		if (!gsap || !layer) return null;
 
 		const ns = 'http://www.w3.org/2000/svg';
@@ -158,7 +177,7 @@
 		const boxW = 180;
 		const boxH = 44;
 		const boxX = CACHE.x + CACHE.w / 2 - boxW / 2;
-		const boxY = CACHE.y - 52;
+		const boxY = CACHE.y - 80;
 
 		const bg = document.createElementNS(ns, 'rect');
 		bg.setAttribute('x', String(boxX));
@@ -193,13 +212,23 @@
 	}
 
 	function animateHit(entry: TraceEntry) {
-		const layer = getAnimatedLayer();
-		if (!gsap || !layer) return;
+		const layer = getLayer();
+		if (!gsap || !layer || entry.evictedBlock === null) return;
 
-		const statusEl = showStatus('HIT', '#16a34a');
+		const cpu = getCPURightEdge();
+		const cachePt = getCacheEntryPoint(entry.cacheLineIndex);
+
+		const pulse = createPulse(cpu.x, cpu.y, cachePt.x, cachePt.y);
+		layer.appendChild(pulse);
+
+		timeline = gsap.timeline();
+		timeline
+			.to(pulse, { attr: { x2: cachePt.x, y2: cachePt.y }, opacity: 0.3, duration: 0.2, ease: 'power2.out' })
+			.call(() => removeElement(pulse))
+			.call(() => flashCacheLine(entry.cacheLineIndex, '#86efac'))
+			.call(() => { showStatus('HIT', '#16a34a'); }, undefined, '+=0.15');
 
 		const mem = getMemoryCenter();
-		const cachePt = getCacheEntryPoint(entry.cacheLineIndex);
 		const block = createBlock(mem.x, mem.y, entry.memoryBlock, '#bbf7d0');
 		layer.appendChild(block);
 
@@ -208,35 +237,43 @@
 		const trail = createTrail(mem.x, mem.y);
 		layer.appendChild(trail);
 
-		timeline = gsap.timeline();
 		timeline
-			.fromTo(block, { opacity: 0, scale: 0.3, transformOrigin: 'center center' }, { opacity: 1, scale: 1, duration: 0.25, ease: 'back.out(1.7)' })
-			.to(trail, { attr: { x2: cachePt.x, y2: cachePt.y }, opacity: 0, duration: 0.7, ease: 'power2.inOut' }, '-=0.1')
+			.fromTo(block, { opacity: 0, scale: 0.3, transformOrigin: 'center center' }, { opacity: 1, scale: 1, duration: 0.2, ease: 'back.out(1.7)' })
+			.to(trail, { attr: { x2: cachePt.x, y2: cachePt.y }, opacity: 0, duration: 0.5, ease: 'power2.inOut' }, '-=0.05')
 			.to(block, {
 				motionPath: { path: pathD, align: pathD, alignOrigin: [0.5, 0.5] },
-				duration: 0.7,
+				duration: 0.5,
 				ease: 'power3.inOut'
-			}, '-=0.7')
+			}, '-=0.5')
 			.call(() => {
 				flashCacheLine(entry.cacheLineIndex, '#22c55e');
 				removeElement(trail);
 			})
-			.to(block, { scale: 1.2, duration: 0.12, ease: 'power2.out', transformOrigin: 'center center' })
-			.to(block, { scale: 1, duration: 0.12, ease: 'power2.in', transformOrigin: 'center center' })
-			.to(block, { opacity: 0, scale: 0.8, duration: 0.3, ease: 'power2.in', onComplete: () => {
+			.to(block, { scale: 1.15, duration: 0.1, ease: 'power2.out', transformOrigin: 'center center' })
+			.to(block, { scale: 1, duration: 0.1, ease: 'power2.in', transformOrigin: 'center center' })
+			.to(block, { opacity: 0, duration: 0.25, ease: 'power2.in' })
+			.call(() => {
 				removeElement(block);
-				if (statusEl) removeElement(statusEl);
-			}}, '+=0.2');
+			});
 	}
 
 	function animateMissEmpty(entry: TraceEntry) {
-		const layer = getAnimatedLayer();
+		const layer = getLayer();
 		if (!gsap || !layer) return;
 
-		const statusEl = showStatus('MISS', '#dc2626');
+		const cpu = getCPURightEdge();
+		const cachePt = getCacheEntryPoint(entry.cacheLineIndex);
+
+		const pulse = createPulse(cpu.x, cpu.y, cachePt.x, cachePt.y);
+		layer.appendChild(pulse);
+
+		timeline = gsap.timeline();
+		timeline
+			.to(pulse, { attr: { x2: cachePt.x, y2: cachePt.y }, opacity: 0.3, duration: 0.2, ease: 'power2.out' })
+			.call(() => removeElement(pulse))
+			.call(() => { showStatus('MISS', '#dc2626'); }, undefined, '+=0.1');
 
 		const mem = getMemoryCenter();
-		const cachePt = getCacheEntryPoint(entry.cacheLineIndex);
 		const block = createBlock(mem.x, mem.y, entry.memoryBlock, '#fecaca');
 		layer.appendChild(block);
 
@@ -245,41 +282,53 @@
 		const trail = createTrail(mem.x, mem.y);
 		layer.appendChild(trail);
 
-		timeline = gsap.timeline();
 		timeline
-			.fromTo(block, { opacity: 0, scale: 0.3, transformOrigin: 'center center' }, { opacity: 1, scale: 1, duration: 0.25, ease: 'back.out(1.7)' })
-			.to(trail, { attr: { x2: cachePt.x, y2: cachePt.y }, opacity: 0, duration: 0.7, ease: 'power2.inOut' }, '-=0.1')
+			.fromTo(block, { opacity: 0, scale: 0.3, transformOrigin: 'center center' }, { opacity: 1, scale: 1, duration: 0.2, ease: 'back.out(1.7)' })
+			.to(trail, { attr: { x2: cachePt.x, y2: cachePt.y }, opacity: 0, duration: 0.5, ease: 'power2.inOut' }, '-=0.05')
 			.to(block, {
 				motionPath: { path: pathD, align: pathD, alignOrigin: [0.5, 0.5] },
-				duration: 0.7,
+				duration: 0.5,
 				ease: 'power3.inOut'
-			}, '-=0.7')
+			}, '-=0.5')
 			.call(() => {
 				flashCacheLine(entry.cacheLineIndex, '#ef4444');
 				removeElement(trail);
 			})
-			.to(block, { scale: 1.2, duration: 0.12, ease: 'power2.out', transformOrigin: 'center center' })
-			.to(block, { scale: 1, duration: 0.12, ease: 'power2.in', transformOrigin: 'center center' })
-			.to(block, { opacity: 0, scale: 0.8, duration: 0.3, ease: 'power2.in', onComplete: () => {
+			.to(block, { scale: 1.15, duration: 0.1, ease: 'power2.out', transformOrigin: 'center center' })
+			.to(block, { scale: 1, duration: 0.1, ease: 'power2.in', transformOrigin: 'center center' })
+			.to(block, { opacity: 0, duration: 0.25, ease: 'power2.in' })
+			.call(() => {
 				removeElement(block);
-				if (statusEl) removeElement(statusEl);
-			}}, '+=0.2');
+			});
 	}
 
 	function animateMissEviction(entry: TraceEntry) {
-		const layer = getAnimatedLayer();
-		if (!gsap || !layer || entry.evictedBlock === null) return;
+		const layer = getLayer();
+		if (!gsap || !layer) return;
 
-		const statusEl = showStatus('EVICT', '#d97706');
+		const cpu = getCPURightEdge();
+		const cachePt = getCacheEntryPoint(entry.cacheLineIndex);
+
+		const pulse = createPulse(cpu.x, cpu.y, cachePt.x, cachePt.y);
+		layer.appendChild(pulse);
+
+		timeline = gsap.timeline();
+		timeline
+			.to(pulse, { attr: { x2: cachePt.x, y2: cachePt.y }, opacity: 0.3, duration: 0.2, ease: 'power2.out' })
+			.call(() => removeElement(pulse))
+			.call(() => { showStatus('EVICT', '#d97706'); });
 
 		const exitPt = getCacheExitPoint(entry.cacheLineIndex);
-		const oldBlock = createBlock(exitPt.x - 50, exitPt.y, entry.evictedBlock, '#fde68a');
+		const oldBlock = createBlock(exitPt.x - 50, exitPt.y, entry.evictedBlock!, '#fde68a');
 		layer.appendChild(oldBlock);
 
 		const flyOutY = exitPt.y - 120;
 
+		timeline
+			.to(oldBlock, { y: flyOutY, x: exitPt.x - 100, opacity: 0, scale: 0.5, duration: 0.4, ease: 'power2.in', transformOrigin: 'center center' })
+			.call(() => removeElement(oldBlock));
+
 		const mem = getMemoryCenter();
-		const cachePt = getCacheEntryPoint(entry.cacheLineIndex);
 		const newBlock = createBlock(mem.x, mem.y, entry.memoryBlock, '#fecaca');
 		layer.appendChild(newBlock);
 
@@ -288,27 +337,25 @@
 		const trail = createTrail(mem.x, mem.y);
 		layer.appendChild(trail);
 
-		timeline = gsap.timeline();
 		timeline
-			.to(oldBlock, { y: flyOutY, opacity: 0, scale: 0.5, duration: 0.5, ease: 'power2.in', transformOrigin: 'center center' })
-			.call(() => removeElement(oldBlock))
-			.fromTo(newBlock, { opacity: 0, scale: 0.3, transformOrigin: 'center center' }, { opacity: 1, scale: 1, duration: 0.25, ease: 'back.out(1.7)' }, '-=0.2')
-			.to(trail, { attr: { x2: cachePt.x, y2: cachePt.y }, opacity: 0, duration: 0.7, ease: 'power2.inOut' }, '-=0.1')
+			.call(() => { showStatus('MISS', '#dc2626'); })
+			.fromTo(newBlock, { opacity: 0, scale: 0.3, transformOrigin: 'center center' }, { opacity: 1, scale: 1, duration: 0.2, ease: 'back.out(1.7)' })
+			.to(trail, { attr: { x2: cachePt.x, y2: cachePt.y }, opacity: 0, duration: 0.5, ease: 'power2.inOut' }, '-=0.05')
 			.to(newBlock, {
 				motionPath: { path: pathD, align: pathD, alignOrigin: [0.5, 0.5] },
-				duration: 0.7,
+				duration: 0.5,
 				ease: 'power3.inOut'
-			}, '-=0.7')
+			}, '-=0.5')
 			.call(() => {
 				flashCacheLine(entry.cacheLineIndex, '#f59e0b');
 				removeElement(trail);
 			})
-			.to(newBlock, { scale: 1.2, duration: 0.12, ease: 'power2.out', transformOrigin: 'center center' })
-			.to(newBlock, { scale: 1, duration: 0.12, ease: 'power2.in', transformOrigin: 'center center' })
-			.to(newBlock, { opacity: 0, scale: 0.8, duration: 0.3, ease: 'power2.in', onComplete: () => {
+			.to(newBlock, { scale: 1.15, duration: 0.1, ease: 'power2.out', transformOrigin: 'center center' })
+			.to(newBlock, { scale: 1, duration: 0.1, ease: 'power2.in', transformOrigin: 'center center' })
+			.to(newBlock, { opacity: 0, duration: 0.25, ease: 'power2.in' })
+			.call(() => {
 				removeElement(newBlock);
-				if (statusEl) removeElement(statusEl);
-			}}, '+=0.2');
+			});
 	}
 
 	function playAnimation(entry: TraceEntry) {
@@ -356,7 +403,7 @@
 
 	<svg
 		bind:this={svgEl}
-		viewBox="0 0 {SVG_WIDTH} {SVG_HEIGHT}"
+		viewBox="0 -10 {SVG_WIDTH} {SVG_HEIGHT + 10}"
 		class="w-full h-auto"
 	>
 		<defs>
@@ -366,15 +413,15 @@
 			</filter>
 		</defs>
 
-		<g id="animated-layer-{label}"></g>
+		<g bind:this={layerEl}></g>
 
 		<!-- CPU Box -->
 		<rect x={CPU.x} y={CPU.y} width={CPU.w} height={CPU.h} rx="10" fill="#dbeafe" stroke="#3b82f6" stroke-width="2.5" />
-		<text x={CPU.x + CPU.w / 2} y={CPU.y + CPU.h / 2 + 5} text-anchor="middle" font-size="16" font-weight="bold" fill="#1e40af">CPU</text>
+		<text x={CPU.x + CPU.w / 2} y={CPU.y + CPU.h / 2 + 5} text-anchor="middle" font-size="18" font-weight="bold" fill="#1e40af">CPU</text>
 
 		<!-- Cache Box -->
 		<rect x={CACHE.x} y={CACHE.y} width={CACHE.w} height={CACHE.h} rx="10" fill="#f0fdf4" stroke="#22c55e" stroke-width="2.5" />
-		<text x={CACHE.x + CACHE.w / 2} y={CACHE.y - 68} text-anchor="middle" font-size="18" font-weight="bold" fill="#166534">Cache ({cacheBlockCount} lines)</text>
+		<text x={CACHE.x + CACHE.w / 2} y={CACHE.y - 110} text-anchor="middle" font-size="18" font-weight="bold" fill="#166534">Cache ({cacheBlockCount} lines)</text>
 
 		<!-- Cache Lines -->
 		{#each cacheLines as line, i}
@@ -390,8 +437,8 @@
 					stroke={line.valid ? '#86efac' : '#e5e7eb'}
 					stroke-width="1.5"
 				/>
-				<text x={CACHE.x + 18} y={y + 4} font-size="10" fill="#6b7280">L{line.lineIndex}</text>
-				<text x={CACHE.x + 48} y={y + 4} font-size="10" font-family="monospace" fill={line.valid ? '#166534' : '#9ca3af'}>
+				<text x={CACHE.x + 18} y={y + 4} font-size="12" fill="#6b7280">L{line.lineIndex}</text>
+				<text x={CACHE.x + 48} y={y + 4} font-size="12" font-family="monospace" fill={line.valid ? '#166534' : '#9ca3af'}>
 					{line.valid ? `Blk ${line.memoryBlock}` : 'empty'}
 				</text>
 			{/if}
@@ -399,8 +446,8 @@
 
 		<!-- Memory Box -->
 		<rect x={MEMORY.x} y={MEMORY.y} width={MEMORY.w} height={MEMORY.h} rx="10" fill="#fef3c7" stroke="#f59e0b" stroke-width="2.5" />
-		<text x={MEMORY.x + MEMORY.w / 2} y={MEMORY.y + MEMORY.h / 2 - 6} text-anchor="middle" font-size="14" font-weight="bold" fill="#92400e">Memory</text>
-		<text x={MEMORY.x + MEMORY.w / 2} y={MEMORY.y + MEMORY.h / 2 + 12} text-anchor="middle" font-size="11" fill="#a16207">{config.mainMemoryBlockCount} blocks</text>
+		<text x={MEMORY.x + MEMORY.w / 2} y={MEMORY.y + MEMORY.h / 2 - 6} text-anchor="middle" font-size="16" font-weight="bold" fill="#92400e">Memory</text>
+		<text x={MEMORY.x + MEMORY.w / 2} y={MEMORY.y + MEMORY.h / 2 + 12} text-anchor="middle" font-size="13" fill="#a16207">{config.mainMemoryBlockCount} blocks</text>
 
 		<!-- Legend -->
 		<g transform="translate(20, {SVG_HEIGHT - 90})">
