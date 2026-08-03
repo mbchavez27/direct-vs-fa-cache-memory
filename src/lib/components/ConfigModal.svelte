@@ -12,6 +12,25 @@
 	} = $props();
 
 	let localConfig = $state({ ...config });
+	let dialogEl: HTMLDivElement | undefined = $state(undefined);
+
+	$effect(() => {
+		if (!open) return;
+
+		function onKeyDown(e: KeyboardEvent) {
+			if (e.key === 'Escape') {
+				e.preventDefault();
+				handleCancel();
+			}
+		}
+
+		window.addEventListener('keydown', onKeyDown);
+		dialogEl?.focus();
+
+		return () => {
+			window.removeEventListener('keydown', onKeyDown);
+		};
+	});
 
 	function handleApply() {
 		config = { ...localConfig };
