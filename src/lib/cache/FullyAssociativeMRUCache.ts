@@ -128,4 +128,10 @@ export class FullyAssociativeMRUCache {
             lines: this.lines.map((line) => ({ ...line })),
         };
     }
+
+    // Restores cache lines and step counter from a saved snapshot
+    public restoreFromSnapshot(snapshot: CacheSnapshot, step: number) {
+        this.lines = snapshot.lines.map((line) => ({ ...line }));
+        this.currentStep = step;
+    }
 }

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { CacheConfig, ReadPolicy } from '$lib/cache/types';
+	import { validateConfiguration } from '$lib/cache/validation';
 
 	let {
 		config = $bindable({} as CacheConfig),
@@ -12,6 +13,7 @@
 	} = $props();
 
 	let localConfig = $state({ ...config });
+	let validationErrors = $state<string[]>([]);
 
 	$effect(() => {
 		if (!open) return;
@@ -31,15 +33,27 @@
 		};
 	});
 
+	function validate(): boolean {
+		validationErrors = validateConfiguration(localConfig);
+		return validationErrors.length === 0;
+	}
+
 	function handleApply() {
+		if (!validate()) return;
 		config = { ...localConfig };
 		onApply();
 		open = false;
+		validationErrors = [];
 	}
 
 	function handleCancel() {
 		localConfig = { ...config };
+		validationErrors = [];
 		open = false;
+	}
+
+	function getErrorForField(field: string): string | null {
+		return validationErrors.find((e) => e.toLowerCase().includes(field.toLowerCase())) ?? null;
 	}
 </script>
 
@@ -67,6 +81,9 @@
 						min="2"
 						class="border border-gray-300 rounded px-2 py-1.5 text-sm font-mono"
 					/>
+					{#if getErrorForField('block size')}
+						<span class="text-[11px] text-red-500">{getErrorForField('block size')}</span>
+					{/if}
 				</div>
 
 				<div class="flex flex-col gap-1">
@@ -78,6 +95,9 @@
 						min="4"
 						class="border border-gray-300 rounded px-2 py-1.5 text-sm font-mono"
 					/>
+					{#if getErrorForField('cache block')}
+						<span class="text-[11px] text-red-500">{getErrorForField('cache block')}</span>
+					{/if}
 				</div>
 
 				<div class="flex flex-col gap-1">
@@ -101,6 +121,9 @@
 						min="1"
 						class="border border-gray-300 rounded px-2 py-1.5 text-sm font-mono"
 					/>
+					{#if getErrorForField('cache access')}
+						<span class="text-[11px] text-red-500">{getErrorForField('cache access')}</span>
+					{/if}
 				</div>
 
 				<div class="flex flex-col gap-1">
@@ -112,6 +135,9 @@
 						min="1"
 						class="border border-gray-300 rounded px-2 py-1.5 text-sm font-mono"
 					/>
+					{#if getErrorForField('memory access')}
+						<span class="text-[11px] text-red-500">{getErrorForField('memory access')}</span>
+					{/if}
 				</div>
 
 				<div class="flex flex-col gap-1">
@@ -125,6 +151,14 @@
 					/>
 				</div>
 			</div>
+
+			{#if validationErrors.length > 0}
+				<div class="mt-3 text-xs text-red-600 bg-red-50 rounded px-2 py-1.5">
+					{#each validationErrors as error}
+						<div>• {error}</div>
+					{/each}
+				</div>
+			{/if}
 
 			<div class="flex justify-end gap-2 mt-6">
 				<button

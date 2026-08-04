@@ -1,7 +1,6 @@
 <script lang="ts">
-	import type { CacheConfig, CacheLine, SimulationStatistics, TraceEntry, TestCaseType } from '$lib/cache/types';
+	import type { CacheConfig, CacheLine, SimulationStatistics, TraceEntry, TestCaseType, ComparisonResult } from '$lib/cache/types';
 	import { CacheSimulator } from '$lib/simulator/CacheSimulator';
-	import { compareCaches } from '$lib/simulator/compareCaches';
 	import { formatComparisonToText } from '$lib/simulator/traceFormatter';
 	import ControlBar from '$lib/components/ControlBar.svelte';
 	import CachePanel from '$lib/components/CachePanel.svelte';
@@ -47,6 +46,8 @@
 	});
 
 	let timeoutId: ReturnType<typeof setTimeout> | null = null;
+	// Tracks the skip animation timeout so rapid clicks don't stack multiple timers
+	let skipTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
 	function createEmptyLines(count: number): CacheLine[] {
 		return Array.from({ length: count }, (_, i) => ({
@@ -86,6 +87,9 @@
 
 	function handleLoadSequence(seq: number[]) {
 		stopPlayback();
+		// Clear any pending skip animation timer
+		if (skipTimeoutId !== null) { clearTimeout(skipTimeoutId); skipTimeoutId = null; }
+		didSkip = false;
 		sequence = seq;
 		totalSteps = seq.length;
 		currentStep = 0;
@@ -126,6 +130,23 @@
 		doStep();
 	}
 
+	function handleStepBack() {
+		if (!dmSimulator || !faSimulator) return;
+		stopPlayback();
+
+		const dmOk = dmSimulator.stepBack();
+		const faOk = faSimulator.stepBack();
+		if (!dmOk || !faOk) return;
+
+		currentStep--;
+		dmTrace = dmSimulator.getTrace();
+		faTrace = faSimulator.getTrace();
+		dmSnapshot = dmSimulator.getCurrentSnapshot().lines;
+		faSnapshot = faSimulator.getCurrentSnapshot().lines;
+		dmStats = dmSimulator.getStatistics();
+		faStats = faSimulator.getStatistics();
+	}
+
 	function handleReset() {
 		stopPlayback();
 		if (sequence.length > 0) {
@@ -150,7 +171,9 @@
 		faStats = faSimulator.getStatistics();
 
 		didSkip = true;
-		setTimeout(() => { didSkip = false; }, 500);
+		// Clear any previous skip animation timer before setting a new one
+		if (skipTimeoutId !== null) clearTimeout(skipTimeoutId);
+		skipTimeoutId = setTimeout(() => { didSkip = false; }, 500);
 	}
 
 	function handleApplyConfig() {
@@ -160,8 +183,11 @@
 	}
 
 	function handleExport() {
-		if (sequence.length === 0) return;
-		const comparison = compareCaches(cacheConfig, sequence);
+		if (!dmSimulator || !faSimulator || sequence.length === 0) return;
+		const comparison: ComparisonResult = {
+			directMapped: dmSimulator.getSimulationResult(),
+			fullyAssociative: faSimulator.getSimulationResult(),
+		};
 		const text = formatComparisonToText(comparison);
 		const blob = new Blob([text], { type: 'text/plain' });
 		const url = URL.createObjectURL(blob);
@@ -215,6 +241,11 @@
 			if (e.key === 'ArrowRight') {
 				e.preventDefault();
 				handleStep();
+				return;
+			}
+			if (e.key === 'ArrowLeft') {
+				e.preventDefault();
+				handleStepBack();
 				return;
 			}
 			if (e.key === 'R' || e.key === 'r') {
@@ -281,6 +312,7 @@
 			onPlay={handlePlay}
 			onPause={handlePause}
 			onStep={handleStep}
+			onStepBack={handleStepBack}
 			onSkip={handleSkip}
 			onReset={handleReset}
 			onLoadSequence={handleLoadSequence}
@@ -338,7 +370,8 @@
 				<h3 class="text-sm font-bold text-gray-800 uppercase tracking-wide">Access Trace</h3>
 				<button
 					onclick={handleExport}
-					class="inline-flex items-center gap-1.5 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-medium px-3 py-1.5 rounded transition-colors"
+					disabled={sequence.length === 0 || dmTrace.length === 0}
+					class="inline-flex items-center gap-1.5 bg-white border border-gray-300 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed text-gray-700 text-sm font-medium px-3 py-1.5 rounded transition-colors"
 					title="Download full trace as plain text"
 				>
 					<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

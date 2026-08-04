@@ -17,6 +17,7 @@
 		onPlay = () => {},
 		onPause = () => {},
 		onStep = () => {},
+		onStepBack = () => {},
 		onSkip = () => {},
 		onReset = () => {},
 		onLoadSequence = (_seq: number[]) => {},
@@ -32,6 +33,7 @@
 		onPlay: () => void;
 		onPause: () => void;
 		onStep: () => void;
+		onStepBack: () => void;
 		onSkip: () => void;
 		onReset: () => void;
 		onLoadSequence: (seq: number[]) => void;
@@ -127,6 +129,15 @@
 			{/if}
 
 			<button
+				onclick={onStepBack}
+				disabled={isPlaying || totalSteps === 0 || currentStep <= 0}
+				class="bg-[#21262d] hover:bg-[#30363d] disabled:opacity-40 disabled:cursor-not-allowed text-[#c9d1d9] border border-[#30363d] text-sm font-medium px-3 py-1.5 rounded transition-colors"
+				title="Step back"
+			>
+				Back
+			</button>
+
+			<button
 				onclick={onStep}
 				disabled={isPlaying || totalSteps === 0 || currentStep >= totalSteps}
 				class="bg-[#21262d] hover:bg-[#30363d] disabled:opacity-40 disabled:cursor-not-allowed text-[#c9d1d9] border border-[#30363d] text-sm font-medium px-3 py-1.5 rounded transition-colors"
@@ -154,7 +165,8 @@
 
 			<button
 				onclick={onReset}
-				class="bg-[#da3633]/20 hover:bg-[#da3633]/35 text-[#f85149] border border-[#f85149]/40 text-sm font-medium px-3 py-1.5 rounded transition-colors"
+				disabled={totalSteps === 0}
+				class="bg-[#da3633]/20 hover:bg-[#da3633]/35 disabled:opacity-40 disabled:cursor-not-allowed text-[#f85149] border border-[#f85149]/40 text-sm font-medium px-3 py-1.5 rounded transition-colors"
 				title="Reset"
 			>
 				Reset
@@ -251,5 +263,5 @@
 	{#if error}
 		<div class="mt-2 text-xs text-red-600 bg-red-50 rounded px-2 py-1">{error}</div>
 	{/if}
-	<p class="text-xs font-medium text-gray-600 pt-1"> Space - play/pause | → arrow key - step | End - skip | R - reset</p>
+	<p class="text-xs font-medium text-gray-600 pt-1"> Space - play/pause | ← → arrow keys - step back/forward | End - skip | R - reset</p>
 </div>
