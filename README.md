@@ -1,4 +1,4 @@
-# Direct-Mapped vs. Fully Associative Cache Memory Simulator (Machine 8)
+# Direct-Mapped vs. Fully Associative + MRU Cache Memory Simulator (Machine 8)
 
 **Group WDA** — Bantillo, Airon Matthew F. · Chavez, Max Benedict B. · Chiu, Kristopher Lance A. · Ponce, Jean Rondel R. · Santiago, Juan Ramon B.
 
