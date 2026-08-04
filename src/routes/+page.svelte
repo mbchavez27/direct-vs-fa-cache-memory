@@ -362,12 +362,14 @@
 					cacheLines={dmSnapshot}
 					config={cacheConfig}
 					label="Direct-Mapped"
+					{playbackSpeed}
 				/>
 				<DataFlowVisualizer
 					trace={!didSkip && faTrace.length > 0 ? faTrace[faTrace.length - 1] : null}
 					cacheLines={faSnapshot}
 					config={cacheConfig}
 					label="Fully Associative (MRU)"
+					{playbackSpeed}
 				/>
 			</div>
 			{#if sequence.length > 0}

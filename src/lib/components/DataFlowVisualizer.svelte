@@ -2,12 +2,16 @@
 	import { onMount, onDestroy } from 'svelte';
 	import type { CacheLine, TraceEntry, CacheConfig } from '$lib/cache/types';
 
-	let { trace, cacheLines, config, label = 'Direct-Mapped' }: {
+	let { trace, cacheLines, config, label = 'Direct-Mapped', playbackSpeed = 500 }: {
 		trace: TraceEntry | null;
 		cacheLines: CacheLine[];
 		config: CacheConfig;
 		label?: string;
+		playbackSpeed?: number;
 	} = $props();
+
+	// At fast speeds (<300ms), skip GSAP animations entirely for instant feedback
+	const skipAnimations = $derived(playbackSpeed < 300);
 
 	let svgEl: SVGSVGElement | undefined = $state(undefined);
 	let layerEl: SVGGElement | undefined = $state(undefined);
@@ -211,6 +215,69 @@
 		return g;
 	}
 
+	// Show two status labels side by side (e.g., EVICT → MISS)
+	function showDualStatus(text1: string, color1: string, text2: string, color2: string) {
+		const layer = getLayer();
+		if (!layer) return;
+
+		const ns = 'http://www.w3.org/2000/svg';
+		const g = document.createElementNS(ns, 'g');
+
+		const boxW = 260;
+		const boxH = 44;
+		const boxX = CACHE.x + CACHE.w / 2 - boxW / 2;
+		const boxY = CACHE.y - 80;
+
+		const bg = document.createElementNS(ns, 'rect');
+		bg.setAttribute('x', String(boxX));
+		bg.setAttribute('y', String(boxY));
+		bg.setAttribute('width', String(boxW));
+		bg.setAttribute('height', String(boxH));
+		bg.setAttribute('rx', '10');
+		bg.setAttribute('fill', 'white');
+		bg.setAttribute('stroke', color1);
+		bg.setAttribute('stroke-width', '3');
+		g.appendChild(bg);
+
+		// First label (EVICT)
+		const text1El = document.createElementNS(ns, 'text');
+		text1El.setAttribute('x', String(boxX + 60));
+		text1El.setAttribute('y', String(boxY + boxH / 2 + 7));
+		text1El.setAttribute('text-anchor', 'middle');
+		text1El.setAttribute('font-size', '20');
+		text1El.setAttribute('font-weight', 'bold');
+		text1El.setAttribute('font-family', 'monospace');
+		text1El.setAttribute('fill', color1);
+		text1El.textContent = text1;
+		g.appendChild(text1El);
+
+		// Arrow
+		const arrow = document.createElementNS(ns, 'text');
+		arrow.setAttribute('x', String(boxX + boxW / 2));
+		arrow.setAttribute('y', String(boxY + boxH / 2 + 7));
+		arrow.setAttribute('text-anchor', 'middle');
+		arrow.setAttribute('font-size', '18');
+		arrow.setAttribute('font-weight', 'bold');
+		arrow.setAttribute('font-family', 'monospace');
+		arrow.setAttribute('fill', '#6b7280');
+		arrow.textContent = '→';
+		g.appendChild(arrow);
+
+		// Second label (MISS)
+		const text2El = document.createElementNS(ns, 'text');
+		text2El.setAttribute('x', String(boxX + boxW - 60));
+		text2El.setAttribute('y', String(boxY + boxH / 2 + 7));
+		text2El.setAttribute('text-anchor', 'middle');
+		text2El.setAttribute('font-size', '20');
+		text2El.setAttribute('font-weight', 'bold');
+		text2El.setAttribute('font-family', 'monospace');
+		text2El.setAttribute('fill', color2);
+		text2El.textContent = text2;
+		g.appendChild(text2El);
+
+		layer.appendChild(g);
+	}
+
 function animateHit(entry: TraceEntry) {
     const layer = getLayer();
     if (!gsap || !layer || !entry.isHit) return;
@@ -313,10 +380,11 @@ function animateHit(entry: TraceEntry) {
 		layer.appendChild(pulse);
 
 		timeline = gsap.timeline();
+		// Show combined EVICT → MISS label from the start
 		timeline
 			.to(pulse, { attr: { x2: cachePt.x, y2: cachePt.y }, opacity: 0.3, duration: 0.2, ease: 'power2.out' })
 			.call(() => removeElement(pulse))
-			.call(() => { showStatus('EVICT', '#d97706'); });
+			.call(() => { showDualStatus('EVICT', '#d97706', 'MISS', '#dc2626'); });
 
 		const exitPt = getCacheExitPoint(entry.cacheLineIndex);
 		const oldBlock = createBlock(exitPt.x - 50, exitPt.y, entry.evictedBlock!, '#fde68a');
@@ -338,7 +406,6 @@ function animateHit(entry: TraceEntry) {
 		layer.appendChild(trail);
 
 		timeline
-			.call(() => { showStatus('MISS', '#dc2626'); })
 			.fromTo(newBlock, { opacity: 0, scale: 0.3, transformOrigin: 'center center' }, { opacity: 1, scale: 1, duration: 0.2, ease: 'back.out(1.7)' })
 			.to(trail, { attr: { x2: cachePt.x, y2: cachePt.y }, opacity: 0, duration: 0.5, ease: 'power2.inOut' }, '-=0.05')
 			.to(newBlock, {
@@ -358,11 +425,65 @@ function animateHit(entry: TraceEntry) {
 			});
 	}
 
+	// Show status label instantly without GSAP animation
+	function showStatusInstant(text: string, color: string) {
+		const layer = getLayer();
+		if (!layer) return;
+
+		const ns = 'http://www.w3.org/2000/svg';
+		const g = document.createElementNS(ns, 'g');
+
+		const boxW = 180;
+		const boxH = 44;
+		const boxX = CACHE.x + CACHE.w / 2 - boxW / 2;
+		const boxY = CACHE.y - 80;
+
+		const bg = document.createElementNS(ns, 'rect');
+		bg.setAttribute('x', String(boxX));
+		bg.setAttribute('y', String(boxY));
+		bg.setAttribute('width', String(boxW));
+		bg.setAttribute('height', String(boxH));
+		bg.setAttribute('rx', '10');
+		bg.setAttribute('fill', 'white');
+		bg.setAttribute('stroke', color);
+		bg.setAttribute('stroke-width', '3');
+		g.appendChild(bg);
+
+		const textEl = document.createElementNS(ns, 'text');
+		textEl.setAttribute('x', String(boxX + boxW / 2));
+		textEl.setAttribute('y', String(boxY + boxH / 2 + 7));
+		textEl.setAttribute('text-anchor', 'middle');
+		textEl.setAttribute('font-size', '22');
+		textEl.setAttribute('font-weight', 'bold');
+		textEl.setAttribute('font-family', 'monospace');
+		textEl.setAttribute('fill', color);
+		textEl.textContent = text;
+		g.appendChild(textEl);
+
+		layer.appendChild(g);
+	}
+
 	function playAnimation(entry: TraceEntry) {
 		if (timeline) {
 			timeline.kill();
 		}
 		cleanupAll();
+
+		// At fast speeds, skip GSAP animations and show instant feedback
+		if (skipAnimations) {
+			if (entry.isHit) {
+				showStatusInstant('HIT', '#16a34a');
+				flashCacheLine(entry.cacheLineIndex, '#22c55e');
+			} else if (entry.evictedBlock !== null) {
+				// Show combined EVICT → MISS label for evictions
+				showDualStatus('EVICT', '#d97706', 'MISS', '#dc2626');
+				flashCacheLine(entry.cacheLineIndex, '#f59e0b');
+			} else {
+				showStatusInstant('MISS', '#dc2626');
+				flashCacheLine(entry.cacheLineIndex, '#ef4444');
+			}
+			return;
+		}
 
 		if (entry.isHit) {
 			animateHit(entry);

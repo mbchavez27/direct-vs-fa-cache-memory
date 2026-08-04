@@ -44,6 +44,14 @@
 
 	const presets: TestCaseType[] = ['Sequential', 'Mid-repeat', 'Random', 'Custom'];
 
+	// Maps speed level to descriptive label
+	const SPEED_LABELS: Record<number, string> = {
+		1: 'Very Slow', 2: 'Slow', 3: 'Slow',
+		4: '', 5: 'Normal', 6: '',
+		7: '', 8: 'Fast', 9: 'Fast', 10: 'Very Fast'
+	};
+	const speedLabel = $derived(SPEED_LABELS[speedLevel] ?? '');
+
 	function generateSequence(): number[] {
 		error = '';
 		try {
@@ -174,7 +182,9 @@
 		</div>
 
 		<div class="flex flex-col gap-2">
-			<label for="speed-slider" class="text-xs font-medium text-gray-600">Speed: {speedLevel}/10</label>
+			<label for="speed-slider" class="text-xs font-medium text-gray-600">
+				Speed: {speedLevel}/10 {speedLabel ? `· ${speedLabel}` : ''}
+			</label>
 			<input
 				id="speed-slider"
 				type="range"
