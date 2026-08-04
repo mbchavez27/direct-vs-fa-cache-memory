@@ -23,8 +23,13 @@
 	let isPlaying = $state(false);
 	let currentStep = $state(0);
 	let totalSteps = $state(0);
-	let playbackSpeed = $state(500);
+	// Speed level 1 (slow) to 10 (fast), default 5
+	let speedLevel = $state(5);
 	let showConfig = $state(false);
+
+	// Maps speed level 1-10 to delay in ms (1=2000ms slow, 10=50ms fast)
+	const SPEED_TABLE = [2000, 1500, 1000, 750, 500, 350, 250, 150, 100, 50];
+	const playbackSpeed = $derived(SPEED_TABLE[speedLevel - 1] ?? 500);
 	let didSkip = $state(false);
 
 	let dmSimulator = $state<CacheSimulator | null>(null);
@@ -307,7 +312,7 @@
 			bind:isPlaying
 			bind:currentStep
 			bind:totalSteps
-			bind:playbackSpeed
+			bind:speedLevel
 			{sequence}
 			onPlay={handlePlay}
 			onPause={handlePause}

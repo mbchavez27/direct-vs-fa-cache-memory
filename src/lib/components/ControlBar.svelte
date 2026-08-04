@@ -12,7 +12,7 @@
 		isPlaying = $bindable(false),
 		currentStep = $bindable(0),
 		totalSteps = $bindable(0),
-		playbackSpeed = $bindable(500),
+		speedLevel = $bindable(5),
 		sequence = [],
 		onPlay = () => {},
 		onPause = () => {},
@@ -28,7 +28,7 @@
 		isPlaying: boolean;
 		currentStep: number;
 		totalSteps: number;
-		playbackSpeed: number;
+		speedLevel: number;
 		sequence: number[];
 		onPlay: () => void;
 		onPause: () => void;
@@ -174,14 +174,14 @@
 		</div>
 
 		<div class="flex flex-col gap-2">
-			<label for="speed-slider" class="text-xs font-medium text-gray-600">Speed ({playbackSpeed}ms)</label>
+			<label for="speed-slider" class="text-xs font-medium text-gray-600">Speed: {speedLevel}/10</label>
 			<input
 				id="speed-slider"
 				type="range"
-				min="50"
-				max="2000"
-				step="50"
-				bind:value={playbackSpeed}
+				min="1"
+				max="10"
+				step="1"
+				bind:value={speedLevel}
 				class="w-24 h-1.5 bg-[#21262d] rounded-lg appearance-none cursor-pointer border border-[#30363d]
 					[&::-webkit-slider-thumb]:appearance-none 
 					[&::-webkit-slider-thumb]:w-3 
