@@ -13,6 +13,9 @@
 	// At fast speeds (<300ms), skip GSAP animations entirely for instant feedback
 	const skipAnimations = $derived(playbackSpeed < 300);
 
+	// Respect user's prefers-reduced-motion setting
+	let prefersReducedMotion = $state(false);
+
 	let svgEl: SVGSVGElement | undefined = $state(undefined);
 	let layerEl: SVGGElement | undefined = $state(undefined);
 	let timeline: ReturnType<typeof import('gsap').gsap.timeline> | null = null;
@@ -47,6 +50,10 @@
 		const { MotionPathPlugin } = await import('gsap/MotionPathPlugin');
 		gsapModule.default.registerPlugin(MotionPathPlugin);
 		gsap = gsapModule.default;
+
+		const mql = window.matchMedia('(prefers-reduced-motion: reduce)');
+		prefersReducedMotion = mql.matches;
+		mql.addEventListener('change', (e) => { prefersReducedMotion = e.matches; });
 	});
 
 	function getCacheLineY(lineIndex: number): number {
@@ -434,8 +441,8 @@ function animateHit(entry: TraceEntry) {
 		}
 		cleanupAll();
 
-		// At fast speeds, skip GSAP animations and show instant feedback
-		if (skipAnimations) {
+		// At fast speeds or reduced motion preference, skip GSAP animations
+		if (skipAnimations || prefersReducedMotion) {
 			if (entry.isHit) {
 				showStatus('HIT', '#16a34a', false);
 				flashCacheLine(entry.cacheLineIndex, '#22c55e');

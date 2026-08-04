@@ -15,6 +15,23 @@
 	let localConfig = $state({ ...config });
 	let validationErrors = $state<string[]>([]);
 
+	const FOCUSABLE_SELECTOR = 'input, select, button, [tabindex]:not([tabindex="-1"])';
+
+	function trapFocus(e: KeyboardEvent) {
+		if (e.key !== 'Tab') return;
+		const dialog = document.getElementById('config-dialog');
+		if (!dialog) return;
+		const focusable = Array.from(dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
+		if (focusable.length === 0) return;
+		const first = focusable[0];
+		const last = focusable[focusable.length - 1];
+		if (e.shiftKey) {
+			if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+		} else {
+			if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+		}
+	}
+
 	$effect(() => {
 		if (!open) return;
 
@@ -23,6 +40,7 @@
 				e.preventDefault();
 				handleCancel();
 			}
+			trapFocus(e);
 		}
 
 		window.addEventListener('keydown', onKeyDown);
