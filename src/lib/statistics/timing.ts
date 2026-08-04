@@ -5,6 +5,7 @@ export function getAccessTime(
     readPolicy: ReadPolicy,
     cacheAccessTimeNs: number,
     memoryAccessTimeNs: number,
+    blockSize: number,
 ): number {
     if (isHit) {
         return cacheAccessTimeNs;
@@ -15,5 +16,7 @@ export function getAccessTime(
         return cacheAccessTimeNs + memoryAccessTimeNs;
     }
     // Non-load-through
-    return cacheAccessTimeNs + memoryAccessTimeNs + cacheAccessTimeNs;
+    return (
+        cacheAccessTimeNs + memoryAccessTimeNs * blockSize + cacheAccessTimeNs
+    );
 }

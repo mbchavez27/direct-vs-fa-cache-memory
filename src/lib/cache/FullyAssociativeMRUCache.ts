@@ -105,6 +105,7 @@ export class FullyAssociativeMRUCache {
             this.config.readPolicy,
             this.config.cacheAccessTimeNs,
             this.config.memoryAccessTimeNs,
+            this.config.blockSizeWords,
         );
 
         this.currentStep++;

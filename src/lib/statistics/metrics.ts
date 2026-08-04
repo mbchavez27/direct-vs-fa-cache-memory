@@ -27,6 +27,7 @@ export function calculateMetrics(
         config.readPolicy,
         config.cacheAccessTimeNs,
         config.memoryAccessTimeNs,
+        config.blockSizeWords,
     );
     // T_avg = hC + (1-h)*M
     let averageMemoryAccessTimeNs =

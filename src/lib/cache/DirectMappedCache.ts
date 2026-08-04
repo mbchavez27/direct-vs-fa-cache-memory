@@ -78,6 +78,7 @@ export class DirectMappedCache {
                 this.config.readPolicy,
                 this.config.cacheAccessTimeNs,
                 this.config.memoryAccessTimeNs,
+                this.config.blockSizeWords,
             ),
         };
     }
