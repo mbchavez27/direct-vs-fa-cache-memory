@@ -2,9 +2,10 @@
 	import { fly } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
 
-	let { sequence, currentStep }: {
+	let { sequence, currentStep, didSkip = false }: {
 		sequence: number[];
 		currentStep: number;
+		didSkip?: boolean;
 	} = $props();
 
 	let scrollEl: HTMLDivElement | undefined = $state(undefined);
@@ -40,7 +41,9 @@
 								: i < currentStep - 1
 									? 'bg-gray-200 text-gray-500'
 									: 'bg-gray-100 text-gray-700 border border-gray-300'
-							}"
+							}
+							{didSkip && i < currentStep ? 'animate-skip-sweep' : ''}"
+						style={didSkip && i < currentStep ? `animation-delay: ${i * 2}ms` : ''}
 					>
 						{block}
 						{#if i === currentStep - 1}

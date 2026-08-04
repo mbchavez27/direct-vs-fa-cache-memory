@@ -17,6 +17,7 @@
 		onPlay = () => {},
 		onPause = () => {},
 		onStep = () => {},
+		onSkip = () => {},
 		onReset = () => {},
 		onLoadSequence = (_seq: number[]) => {},
 	}: {
@@ -31,11 +32,13 @@
 		onPlay: () => void;
 		onPause: () => void;
 		onStep: () => void;
+		onSkip: () => void;
 		onReset: () => void;
 		onLoadSequence: (seq: number[]) => void;
 	} = $props();
 
 	let error = $state('');
+	let skipAnimating = $state(false);
 
 	const presets: TestCaseType[] = ['Sequential', 'Mid-repeat', 'Random', 'Custom'];
 
@@ -130,6 +133,23 @@
 				title="Step"
 			>
 				Step
+			</button>
+
+			<button
+				onclick={() => {
+					skipAnimating = true;
+					onSkip();
+					setTimeout(() => { skipAnimating = false; }, 500);
+				}}
+				disabled={isPlaying || totalSteps === 0 || currentStep >= totalSteps}
+				class="bg-[#8957e5]/20 hover:bg-[#8957e5]/35 disabled:opacity-40 disabled:cursor-not-allowed text-[#d2a8ff] border border-[#8957e5]/40 text-sm font-medium px-3 py-1.5 rounded transition-colors {skipAnimating ? 'animate-skip-glow' : ''}"
+				title="Skip to end"
+			>
+				<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="inline-block align-middle">
+					<polygon points="5 4 15 12 5 20 5 4"/>
+					<line x1="19" y1="5" x2="19" y2="19"/>
+				</svg>
+				<span class="align-middle">Skip</span>
 			</button>
 
 			<button
@@ -231,5 +251,5 @@
 	{#if error}
 		<div class="mt-2 text-xs text-red-600 bg-red-50 rounded px-2 py-1">{error}</div>
 	{/if}
-	<p class="text-xs font-medium text-gray-600 pt-1"> Space - play/pause | → arrow key - step | R - reset</p>
+	<p class="text-xs font-medium text-gray-600 pt-1"> Space - play/pause | → arrow key - step | End - skip | R - reset</p>
 </div>

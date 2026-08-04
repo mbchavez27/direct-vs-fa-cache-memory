@@ -26,6 +26,7 @@
 	let totalSteps = $state(0);
 	let playbackSpeed = $state(500);
 	let showConfig = $state(false);
+	let didSkip = $state(false);
 
 	let dmSimulator = $state<CacheSimulator | null>(null);
 	let faSimulator = $state<CacheSimulator | null>(null);
@@ -132,6 +133,26 @@
 		}
 	}
 
+	function handleSkip() {
+		if (!dmSimulator || !faSimulator) return;
+		if (currentStep >= totalSteps) return;
+
+		stopPlayback();
+		dmSimulator.runToEnd();
+		faSimulator.runToEnd();
+
+		currentStep = totalSteps;
+		dmTrace = dmSimulator.getTrace();
+		faTrace = faSimulator.getTrace();
+		dmSnapshot = dmSimulator.getCurrentSnapshot().lines;
+		faSnapshot = faSimulator.getCurrentSnapshot().lines;
+		dmStats = dmSimulator.getStatistics();
+		faStats = faSimulator.getStatistics();
+
+		didSkip = true;
+		setTimeout(() => { didSkip = false; }, 500);
+	}
+
 	function handleApplyConfig() {
 		if (sequence.length > 0) {
 			handleLoadSequence(sequence);
@@ -200,6 +221,10 @@
 				e.preventDefault();
 				handleReset();
 			}
+			if (e.key === 'End') {
+				e.preventDefault();
+				handleSkip();
+			}
 		}
 
 		window.addEventListener('keydown', onKeyDown);
@@ -256,6 +281,7 @@
 			onPlay={handlePlay}
 			onPause={handlePause}
 			onStep={handleStep}
+			onSkip={handleSkip}
 			onReset={handleReset}
 			onLoadSequence={handleLoadSequence}
 		/>
@@ -264,6 +290,7 @@
 			<SequenceBar
 				{sequence}
 				{currentStep}
+				{didSkip}
 			/>
 		{:else}
 			<h1 class="text-xl font-bold text-gray-900">No sequence loaded — choose a preset and press Load</h1>
@@ -277,6 +304,7 @@
 				evictionLine={dmHighlight.evictionLine}
 				highlightedLine={dmHighlight.highlightedLine}
 				showLastUsed={false}
+				{didSkip}
 			/>
 			<CachePanel
 				title="Fully Associative (MRU)"
@@ -286,19 +314,20 @@
 				evictionLine={faHighlight.evictionLine}
 				highlightedLine={faHighlight.highlightedLine}
 				showLastUsed={true}
+				{didSkip}
 			/>
 			</div>
 
 
 			<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 				<DataFlowVisualizer
-					trace={dmTrace.length > 0 ? dmTrace[dmTrace.length - 1] : null}
+					trace={!didSkip && dmTrace.length > 0 ? dmTrace[dmTrace.length - 1] : null}
 					cacheLines={dmSnapshot}
 					config={cacheConfig}
 					label="Direct-Mapped"
 				/>
 				<DataFlowVisualizer
-					trace={faTrace.length > 0 ? faTrace[faTrace.length - 1] : null}
+					trace={!didSkip && faTrace.length > 0 ? faTrace[faTrace.length - 1] : null}
 					cacheLines={faSnapshot}
 					config={cacheConfig}
 					label="Fully Associative (MRU)"
@@ -325,11 +354,13 @@
 					trace={dmTrace}
 					{currentStep}
 					label="Direct-Mapped"
+					{didSkip}
 				/>
 				<TraceLog
 					trace={faTrace}
 					{currentStep}
 					label="Fully Associative (MRU)"
+					{didSkip}
 				/>
 			</div>
 			{/if}

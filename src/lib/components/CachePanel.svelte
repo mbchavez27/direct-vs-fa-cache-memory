@@ -3,7 +3,7 @@
 	import CacheGrid from './CacheGrid.svelte';
 	import StatsPanel from './StatsPanel.svelte';
 
-	let { title, lines, stats, highlightedLine = -1, hitLine = -1, evictionLine = -1, showLastUsed = false }: {
+	let { title, lines, stats, highlightedLine = -1, hitLine = -1, evictionLine = -1, showLastUsed = false, didSkip = false }: {
 		title: string;
 		lines: CacheLine[];
 		stats: SimulationStatistics;
@@ -11,6 +11,7 @@
 		hitLine?: number;
 		evictionLine?: number;
 		showLastUsed?: boolean;
+		didSkip?: boolean;
 	} = $props();
 </script>
 
@@ -22,6 +23,7 @@
 		{hitLine}
 		{evictionLine}
 		{showLastUsed}
+		{didSkip}
 	/>
-	<StatsPanel {stats} label="Statistics" />
+	<StatsPanel {stats} label="Statistics" {didSkip} />
 </div>

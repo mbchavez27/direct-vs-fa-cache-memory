@@ -3,13 +3,15 @@
 	import { fly } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
 
-	let { trace, currentStep, label }: {
+	let { trace, currentStep, label, didSkip = false }: {
 		trace: TraceEntry[];
 		currentStep: number;
 		label: string;
+		didSkip?: boolean;
 	} = $props();
 
 	let logEl: HTMLDivElement | undefined = $state(undefined);
+	const flyDuration = $derived(didSkip ? 30 : 200);
 
 	$effect(() => {
 		if (logEl && currentStep > 0) {
@@ -39,7 +41,7 @@
 					{@const isActive = i === currentStep - 1}
 					<tr
 						class="border-t {isActive ? 'bg-blue-50' : i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}"
-						in:fly={{ y: 20, duration: 200, easing: quintOut }}
+						in:fly={{ y: 20, duration: flyDuration, easing: quintOut }}
 					>
 						<td class="px-2 py-1 text-gray-500">{entry.step}</td>
 						<td class="px-2 py-1 font-semibold">{entry.memoryBlock}</td>
