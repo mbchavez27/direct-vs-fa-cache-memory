@@ -270,8 +270,10 @@
 			</div>
 		</div>
 	</div>
-	{#if error}
-		<div class="mt-2 text-xs text-red-600 bg-red-50 rounded px-2 py-1">{error}</div>
-	{/if}
+	{#key error}
+		{#if error}
+			<div class="mt-2 text-xs text-red-600 bg-red-50 rounded px-2 py-1 animate-shake">{error}</div>
+		{/if}
+	{/key}
 	<p class="text-xs font-medium text-gray-600 pt-1"> Space - play/pause | ← → arrow keys - step back/forward | End - skip | R - reset</p>
 </div>

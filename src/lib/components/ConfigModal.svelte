@@ -99,9 +99,11 @@
 						min="2"
 						class="border border-gray-300 rounded px-2 py-1.5 text-sm font-mono"
 					/>
+					{#key getErrorForField('block size')}
 					{#if getErrorForField('block size')}
-						<span class="text-[11px] text-red-500">{getErrorForField('block size')}</span>
+						<span class="text-[11px] text-red-500 animate-shake">{getErrorForField('block size')}</span>
 					{/if}
+				{/key}
 				</div>
 
 				<div class="flex flex-col gap-1">
@@ -113,9 +115,11 @@
 						min="4"
 						class="border border-gray-300 rounded px-2 py-1.5 text-sm font-mono"
 					/>
+					{#key getErrorForField('cache block')}
 					{#if getErrorForField('cache block')}
-						<span class="text-[11px] text-red-500">{getErrorForField('cache block')}</span>
+						<span class="text-[11px] text-red-500 animate-shake">{getErrorForField('cache block')}</span>
 					{/if}
+				{/key}
 				</div>
 
 				<div class="flex flex-col gap-1">
@@ -139,9 +143,11 @@
 						min="1"
 						class="border border-gray-300 rounded px-2 py-1.5 text-sm font-mono"
 					/>
+					{#key getErrorForField('cache access')}
 					{#if getErrorForField('cache access')}
-						<span class="text-[11px] text-red-500">{getErrorForField('cache access')}</span>
+						<span class="text-[11px] text-red-500 animate-shake">{getErrorForField('cache access')}</span>
 					{/if}
+				{/key}
 				</div>
 
 				<div class="flex flex-col gap-1">
@@ -153,9 +159,11 @@
 						min="1"
 						class="border border-gray-300 rounded px-2 py-1.5 text-sm font-mono"
 					/>
+					{#key getErrorForField('memory access')}
 					{#if getErrorForField('memory access')}
-						<span class="text-[11px] text-red-500">{getErrorForField('memory access')}</span>
+						<span class="text-[11px] text-red-500 animate-shake">{getErrorForField('memory access')}</span>
 					{/if}
+				{/key}
 				</div>
 
 				<div class="flex flex-col gap-1">
@@ -170,13 +178,15 @@
 				</div>
 			</div>
 
+			{#key validationErrors.length}
 			{#if validationErrors.length > 0}
-				<div class="mt-3 text-xs text-red-600 bg-red-50 rounded px-2 py-1.5">
+				<div class="mt-3 text-xs text-red-600 bg-red-50 rounded px-2 py-1.5 animate-shake">
 					{#each validationErrors as error}
 						<div>• {error}</div>
 					{/each}
 				</div>
 			{/if}
+		{/key}
 
 			<div class="flex justify-end gap-2 mt-6">
 				<button
