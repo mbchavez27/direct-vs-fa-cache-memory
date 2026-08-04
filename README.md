@@ -1,5 +1,9 @@
 # Direct-Mapped vs. Fully Associative Cache Memory Simulator (Machine 8)
 
+**Group WDA** — Bantillo, Airon Matthew F. · Chavez, Max Benedict B. · Chiu, Kristopher Lance A. · Ponce, Jean Rondel R. · Santiago, Juan Ramon B.
+
+---
+
 An interactive cache memory simulator developed for **Machine 8** of the Cache Memory Machines project. This system compares the performance and behavior of a **Direct-Mapped Cache** against a **Fully Associative Cache using the MRU (Most Recently Used) replacement policy**.
 
 The simulator provides cache visualization, execution tracing, memory access statistics, and performance analysis under different memory access patterns.
@@ -481,5 +485,7 @@ Across all three test cases, FSA MRU consistently achieved a higher hit rate and
 # Authors
 
 Machine 8 — Cache Memory Simulator
+
+**Group WDA** — Bantillo, Airon Matthew F. · Chavez, Max Benedict B. · Chiu, Kristopher Lance A. · Ponce, Jean Rondel R. · Santiago, Juan Ramon B.
 
 Developed as part of the **Case Study 1**.
