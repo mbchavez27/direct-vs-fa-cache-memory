@@ -389,7 +389,7 @@
 					<span>Export Trace (.txt)</span>
 				</button>
 			</div>
-			<div class="grid grid-cols-2 gap-4">
+			<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 				<TraceLog
 					trace={dmTrace}
 					{currentStep}

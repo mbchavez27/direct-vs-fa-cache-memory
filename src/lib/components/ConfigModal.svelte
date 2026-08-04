@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { CacheConfig, ReadPolicy } from '$lib/cache/types';
+	import type { CacheConfig } from '$lib/cache/types';
 	import { validateConfiguration } from '$lib/cache/validation';
 
 	let {
@@ -71,7 +71,7 @@
 		>
 			<h2 class="text-lg font-bold text-gray-800 mb-4">Cache Configuration</h2>
 
-			<div class="grid grid-cols-2 gap-4">
+			<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 				<div class="flex flex-col gap-1">
 					<label for="block-size" class="text-xs font-medium text-gray-600">Block Size (words)</label>
 					<input

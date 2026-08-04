@@ -7,7 +7,7 @@ describe('FullyAssociativeMRUCache', () => {
         blockSizeWords: 4,
         cacheBlockCount: 4,
         mainMemoryBlockCount: 1024,
-        readPolicy: 'load-through',
+        readPolicy: 'non-load-through',
         cacheAccessTimeNs: 1,
         memoryAccessTimeNs: 10
     };

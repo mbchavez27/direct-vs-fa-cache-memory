@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 	import type { CacheLine, TraceEntry, CacheConfig } from '$lib/cache/types';
 
 	let { trace, cacheLines, config, label = 'Direct-Mapped', playbackSpeed = 500 }: {
@@ -171,9 +171,10 @@
 		);
 	}
 
-	function showStatus(text: string, color: string) {
+	// Show status label, optionally with GSAP fade-in animation
+	function showStatus(text: string, color: string, animate = true) {
 		const layer = getLayer();
-		if (!gsap || !layer) return null;
+		if (!layer) return null;
 
 		const ns = 'http://www.w3.org/2000/svg';
 		const g = document.createElementNS(ns, 'g');
@@ -207,10 +208,12 @@
 
 		layer.appendChild(g);
 
-		gsap.fromTo(g,
-			{ opacity: 0, y: -10 },
-			{ opacity: 1, y: 0, duration: 0.25, ease: 'power2.out' }
-		);
+		if (animate && gsap) {
+			gsap.fromTo(g,
+				{ opacity: 0, y: -10 },
+				{ opacity: 1, y: 0, duration: 0.25, ease: 'power2.out' }
+			);
+		}
 
 		return g;
 	}
@@ -425,44 +428,6 @@ function animateHit(entry: TraceEntry) {
 			});
 	}
 
-	// Show status label instantly without GSAP animation
-	function showStatusInstant(text: string, color: string) {
-		const layer = getLayer();
-		if (!layer) return;
-
-		const ns = 'http://www.w3.org/2000/svg';
-		const g = document.createElementNS(ns, 'g');
-
-		const boxW = 180;
-		const boxH = 44;
-		const boxX = CACHE.x + CACHE.w / 2 - boxW / 2;
-		const boxY = CACHE.y - 80;
-
-		const bg = document.createElementNS(ns, 'rect');
-		bg.setAttribute('x', String(boxX));
-		bg.setAttribute('y', String(boxY));
-		bg.setAttribute('width', String(boxW));
-		bg.setAttribute('height', String(boxH));
-		bg.setAttribute('rx', '10');
-		bg.setAttribute('fill', 'white');
-		bg.setAttribute('stroke', color);
-		bg.setAttribute('stroke-width', '3');
-		g.appendChild(bg);
-
-		const textEl = document.createElementNS(ns, 'text');
-		textEl.setAttribute('x', String(boxX + boxW / 2));
-		textEl.setAttribute('y', String(boxY + boxH / 2 + 7));
-		textEl.setAttribute('text-anchor', 'middle');
-		textEl.setAttribute('font-size', '22');
-		textEl.setAttribute('font-weight', 'bold');
-		textEl.setAttribute('font-family', 'monospace');
-		textEl.setAttribute('fill', color);
-		textEl.textContent = text;
-		g.appendChild(textEl);
-
-		layer.appendChild(g);
-	}
-
 	function playAnimation(entry: TraceEntry) {
 		if (timeline) {
 			timeline.kill();
@@ -472,14 +437,14 @@ function animateHit(entry: TraceEntry) {
 		// At fast speeds, skip GSAP animations and show instant feedback
 		if (skipAnimations) {
 			if (entry.isHit) {
-				showStatusInstant('HIT', '#16a34a');
+				showStatus('HIT', '#16a34a', false);
 				flashCacheLine(entry.cacheLineIndex, '#22c55e');
 			} else if (entry.evictedBlock !== null) {
 				// Show combined EVICT → MISS label for evictions
 				showDualStatus('EVICT', '#d97706', 'MISS', '#dc2626');
 				flashCacheLine(entry.cacheLineIndex, '#f59e0b');
 			} else {
-				showStatusInstant('MISS', '#dc2626');
+				showStatus('MISS', '#dc2626', false);
 				flashCacheLine(entry.cacheLineIndex, '#ef4444');
 			}
 			return;
@@ -509,13 +474,6 @@ function animateHit(entry: TraceEntry) {
 			}
 			cleanupAll();
 		}
-	});
-
-	onDestroy(() => {
-		if (timeline) {
-			timeline.kill();
-		}
-		cleanupAll();
 	});
 </script>
 
