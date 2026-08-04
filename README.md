@@ -257,15 +257,15 @@ The simulator calculates:
 
 # Analysis
 
-In this section, we will analyze the two cache operations (Direct-mapped and Fully Associative MRU) based on their performance on the three aforementioned test cases. In this analysis, we will only consider the **non-load-through** read policy since this will yield a meaningful difference in performance results. In the **load-through policy**, nothing is ever loaded into cache memory meaning any test case would yield the exact same results (100% miss rate) for any cache operation leaving no substantial data for analysis.
+In this section, we will analyze the two cache operations (Direct-mapped and Fully Associative MRU) based on their performance on the three aforementioned test cases. In this analysis, we will focus on the **non-load-through** read policy to stress test the machines and get the worst case access time.
 
 For all three test cases, we will use the following configuration:
 | Configuration | Value |
 | ------------------------------ | ------------------- |
 | Cache Access Time (CAT) | 1 ns |
 | Main Memory Access Time (MAT) | 10 ns |
-| Miss Penalty (CAT + MAT + CAT) | 12 ns |
-| Block Size | 4 words |
+| Block Size (B) | 4 words |
+| Miss Penalty (CAT + MAT\*B + CAT) | 42 ns |
 | Cache Blocks (n) | 64 blocks |
 | Main Memory | 1024 blocks (fixed) |
 | Read Policy | Non-load-through |
@@ -276,15 +276,15 @@ With n = 64, this test case accesses blocks 0 through 127 (2n-1), then repeats t
 
 ### Direct-Mapped Cache
 
-| Statistic                  | Value      |
-| -------------------------- | ---------- |
-| Total Memory Access Count  | 256        |
-| Hit Count                  | 0          |
-| Miss Count                 | 256        |
-| Hit Rate                   | 0.0%       |
-| Miss Rate                  | 100.0%     |
-| Average Memory Access Time | 12.00 ns   |
-| Total Memory Access Time   | 3072.00 ns |
+| Statistic                  | Value       |
+| -------------------------- | ----------- |
+| Total Memory Access Count  | 256         |
+| Hit Count                  | 0           |
+| Miss Count                 | 256         |
+| Hit Rate                   | 0.0%        |
+| Miss Rate                  | 100.0%      |
+| Average Memory Access Time | 42.00 ns    |
+| Total Memory Access Time   | 10572.00 ns |
 
 For sequential access, the Direct-mapped cache produced a 100% miss rate. This is the expected worst-case outcome for direct mapping given this access pattern: since the cache index is computed as `memory block mod 64`, block _b_ and block _b + 64_ always map to the exact same cache line, The idea is that blocks 0 to 63 are initially loaded into cache. However, blocks 64 to 127 evict blocks 0 to 63 from the cache since the second half of the blocks aliases to the same line as the first half. By the time the sequence repeats, every line now holds a "second-half" block, so re-accessing blocks 0 to 127 misses as each access again evicts whatever tag currently occupies that line. This one-to-one mapping pattern provides no opportunity to retain any useful data resulting in a miss rate of 100%.
 
@@ -297,14 +297,14 @@ For sequential access, the Direct-mapped cache produced a 100% miss rate. This i
 | Miss Count                 | 192        |
 | Hit Rate                   | 25.0%      |
 | Miss Rate                  | 75.0%      |
-| Average Memory Access Time | 9.25 ns    |
-| Total Memory Access Time   | 2368.00 ns |
+| Average Memory Access Time | 31.75 ns   |
+| Total Memory Access Time   | 8128.00 ns |
 
 Unlike Direct-Mapped, the FSA MRU is not constrained to a fixed line-per-block mapping, so it can retain earlier blocks even while later blocks are still being inserted. For this test case, a fully associative cache has a hit rate of 25%. Blocks 0 to 63 are initially loaded into cache in the first pass. Since a Most Recently Used (MRU) replacement algorithm is followed, when blocks 64 to 127 are accessed, only the last cache block ever gets replaced since that is the most recently used block without touching the first 63 cache blocks. Blocks 0 to 62 are retained in cache, so as a result, when these blocks are accessed a second time, all of these accesses result in a cache hit producing a non-zero hit rate.
 
 ### Comparison
 
-_Add comparison between Direct-Mapped and Fully Associative MRU._
+For this specific test case, FSA MRU performs better than Direct-mapped with a lower average memory access time of 31.75 ns. That of direct-mapped is just the miss penalty of 42 ns since the miss rate is 100% Direct-mapped will always have a hit rate of 0% for this test case since memory blocks 0 to n-1 are overwritten before they could be accessed a second time. The same thing happens for blocks n to 2n-1. Although they are accessed and loaded into cache in the first pass, they are overwritten by the second pass of accessing blocks 0 to n-1. For fully associative, a subset of blocks are retained before the second pass resulting in a cache hit for these blocks in the second pass that direct-mapped fails to demonstrate. Direct-mapped cache suffers total thrashing (0% hit rate) due to its rigid mapping mechanism. FSA’s total memory access time (8128 ns) is roughly 23.1% lower than Direct-Mapped's (10752 ns) across the same 256 accesses despite FA-MRU's greater lookup complexity, the elimination of conflict misses more than compensates for this workload.
 
 ---
 
@@ -314,35 +314,35 @@ With n = 64, this test case produces a 640-access sequence: an initial pass thro
 
 ### Direct-Mapped Cache
 
-| Statistic                  | Value      |
-| -------------------------- | ---------- |
-| Total Memory Access Count  | 640        |
-| Hit Count                  | 64         |
-| Miss Count                 | 576        |
-| Hit Rate                   | 10.0%      |
-| Miss Rate                  | 90.0%      |
-| Average Memory Access Time | 10.90 ns   |
-| Total Memory Access Time   | 6976.00 ns |
+| Statistic                  | Value       |
+| -------------------------- | ----------- |
+| Total Memory Access Count  | 640         |
+| Hit Count                  | 64          |
+| Miss Count                 | 576         |
+| Hit Rate                   | 10.0%       |
+| Miss Rate                  | 90.0%       |
+| Average Memory Access Time | 37.90 ns    |
+| Total Memory Access Time   | 24256.00 ns |
 
 Because the cache index is `memory block mod 64`, blocks 0 to 63 and blocks 64 to 127 alias to the same 64 cache lines, distinguished only by tag. The only hits in this entire test case occur during the first repeat of the 0 to 127 block, when blocks 0 to 63 are re-accessed immediately after being loaded in the initial pass (64 hits). Every access afterward requires a line that was just evicted by the previous segment. This produces total thrashing for the remaining 576 accesses, yielding a 10% hit rate overall, since the repeated back-and-forth between the segments still manages to produce a small window of retained data before thrashing resumes.
 
 ### Fully Associative Cache (MRU)
 
-| Statistic                  | Value      |
-| -------------------------- | ---------- |
-| Total Memory Access Count  | 640        |
-| Hit Count                  | 317        |
-| Miss Count                 | 323        |
-| Hit Rate                   | 49.5%      |
-| Miss Rate                  | 50.5%      |
-| Average Memory Access Time | 6.55 ns    |
-| Total Memory Access Time   | 4193.00 ns |
+| Statistic                  | Value       |
+| -------------------------- | ----------- |
+| Total Memory Access Count  | 640         |
+| Hit Count                  | 317         |
+| Miss Count                 | 323         |
+| Hit Rate                   | 49.5%       |
+| Miss Rate                  | 50.5%       |
+| Average Memory Access Time | 21.69 ns    |
+| Total Memory Access Time   | 13883.00 ns |
 
 The FSA MRU is not constrained by a fixed block-to-line mapping, so it can retain blocks across the repeated and reversed passes far more effectively than Direct-Mapped. The mid-repeat pattern's structure plays to MRU's strengths: each new miss evicts only the single most recently inserted block rather than disturbing a whole conflicting range, letting a large portion of the working set stay resident across repeats. This results in roughly half of all accesses hitting (49.5%), nearly five times the hit rate of Direct-Mapped on the same sequence.
 
 ### Comparison
 
-Both cache organizations perform better on this test case than they did on pure sequential access: Direct-Mapped's hit rate rises from 0% to 10%, and Fully Associative MRU's rises from 25% to 49.5%. This makes sense given the structure of the accessing pattern which gives both organizations more opportunities to hit than a single sequential pass followed by one repeat. FSA MRU benefits far more from this added repetition, since it can protect a growing set of recently-used blocks from eviction, while Direct-Mapped's rigid mapping only briefly benefits (the one 64-hit window between the first and second pass through 0 to 127) before reverting to total thrashing for the rest of the sequence. This gap is reflected clearly in access time: Direct-Mapped's average memory access time (10.90 ns) is more than 65% higher than that of FSA MRU (6.55 ns), and its total memory access time (6976 ns) is roughly 66% higher than that of FSA MRU (4193 ns) across the same 640 accesses, showing that FSA MRU's advantage over Direct-Mapped.
+Both cache organizations perform better on this test case than they did on pure sequential access: Direct-Mapped's hit rate rises from 0% to 10%, and Fully Associative MRU's rises from 25% to 49.5%. This makes sense given the structure of the accessing pattern which gives both organizations more opportunities to hit than a single sequential pass followed by one repeat. FSA MRU benefits far more from this added repetition, since it can protect a growing set of recently-used blocks from eviction, while Direct-Mapped's rigid mapping only briefly benefits (the one 64-hit window between the first and second pass through 0 to 127) before reverting to total thrashing for the rest of the sequence. This gap is reflected clearly in access time: Direct-Mapped's average memory access time (37.90 ns) is 74.7% higher than that of FSA MRU (21.69 ns) across the same 640 accesses, showing that FSA MRU's advantage over Direct-Mapped.
 
 ---
 
@@ -352,35 +352,35 @@ Each run consists of 64 randomly generated memory block accesses (range 0-1023).
 
 ### Direct-Mapped Cache
 
-| Statistic                        | Value    |
-| -------------------------------- | -------- |
-| Total Memory Access Count        | 64       |
-| Average Hit Count                | 1.5      |
-| Average Miss Count               | 62.5     |
-| Average Hit Rate                 | 2.35%    |
-| Average Miss Rate                | 97.65%   |
-| Average Memory Access Time       | 11.74 ns |
-| Average Total Memory Access Time | 751.5 ns |
+| Statistic                        | Value     |
+| -------------------------------- | --------- |
+| Total Memory Access Count        | 64        |
+| Average Hit Count                | 1.2       |
+| Average Miss Count               | 62.8      |
+| Average Hit Rate                 | 1.89%     |
+| Average Miss Rate                | 98.11%    |
+| Average Memory Access Time       | 41.23 ns  |
+| Average Total Memory Access Time | 2638.8 ns |
 
-Across the 10 iterations, Direct-Mapped's hit count ranged from as low as 0 to as high as 4 out of 64 accesses, averaging 1.5 hits (2.35% hit rate). This result makes sense given the nature of random access: with 1024 possible memory blocks and only 64 accesses per run, the probability that any two accesses in a single run happen to reference the exact same block is low. Since a cache hit can only occur when a block is accessed more than once, most misses here are compulsory (cold) misses rather than conflict misses. That is the cache simply hasn't seen the block before, regardless of how well or poorly it maps to a line. The handful of hits that do occur come down to chance repeats within a given random run, which explains why the hit count fluctuates so much iteration to iteration.
+Across the 10 iterations, Direct-Mapped averaged 1.2 hits (1.89% hit rate). This result makes sense given the nature of random access: with 1024 possible memory blocks and only 64 accesses per run, the probability that any two accesses in a single run happen to reference the exact same block is low. Since a cache hit can only occur when a block is accessed more than once, most misses here are compulsory (cold) misses rather than conflict misses. That is the cache simply hasn't seen the block before, regardless of how well or poorly it maps to a line. The handful of hits that do occur come down to chance repeats within a given random run, which explains why the hit count fluctuates so much iteration to iteration.
 
 ### Fully Associative Cache (MRU)
 
-| Statistic                        | Value    |
-| -------------------------------- | -------- |
-| Total Memory Access Count        | 64       |
-| Average Hit Count                | 2.3      |
-| Average Miss Count               | 61.7     |
-| Average Hit Rate                 | 3.6%     |
-| Average Miss Rate                | 96.4%    |
-| Average Memory Access Time       | 11.61 ns |
-| Average Total Memory Access Time | 742.7 ns |
+| Statistic                        | Value      |
+| -------------------------------- | ---------- |
+| Total Memory Access Count        | 64         |
+| Average Hit Count                | 1.8        |
+| Average Miss Count               | 62.2       |
+| Average Hit Rate                 | 2.82%      |
+| Average Miss Rate                | 97.19%     |
+| Average Memory Access Time       | 40.85 ns   |
+| Average Total Memory Access Time | 2614.20 ns |
 
-Fully Associative MRU performed only marginally better, averaging 2.3 hits (3.6% hit rate) across the same 10 iterations. This gap over Direct-Mapped is much smaller than what was observed in Test Cases 1 and 2. The explanation is the same underlying cause discussed above: with 64 cache lines and only 64 accesses per run drawn from a much larger address space, the cache is rarely full enough, and blocks are rarely repeated often enough, for organization-specific behavior (conflict avoidance, MRU eviction) to matter much. Both organizations have ample capacity to hold every distinct block encountered in a run, so the small edge Fully Associative shows here is best attributed to it eliminating the possibility of conflict misses on the few repeated accesses that do occur and not to any meaningful advantage in retention strategy, since there's little repeated access for a retention strategy to act on in the first place.
+Fully Associative MRU performed only marginally better, averaging 1.8 hits (2.82% hit rate) across the same 10 iterations. The explanation is the same underlying cause discussed above: with 64 cache lines and only 64 accesses per run drawn from a much larger address space, the cache is rarely full enough, and blocks are rarely repeated often enough, for organization-specific behavior (conflict avoidance, MRU eviction) to matter much. Both organizations have ample capacity to hold every distinct block encountered in a run, so the small edge Fully Associative shows here is best attributed to it eliminating the possibility of conflict misses on the few repeated accesses that do occur and not to any meaningful advantage in retention strategy, since there's little repeated access for a retention strategy to act on in the first place.
 
 ### Comparison
 
-Random access produced the lowest hit rates of all three test cases for both organizations, and the smallest gap between them (2.35% vs. 3.6%, compared to a 15-25 percentage point gap in the sequential and mid-repeat tests). This reflects a fundamentally different bottleneck: in Test Cases 1 and 2, misses were dominated by _conflict_ and _capacity_ pressure; patterns specifically constructed to stress each organization's placement and replacement strategy. In Test Case 3, misses are dominated by _compulsory_ misses driven by the sheer sparseness of the access pattern relative to the address space (64 accesses against 1024 possible blocks), a factor neither organization can do anything about. This is a useful contrast for evaluating cache architecture: Direct-Mapped's weaknesses (rigid aliasing) and Fully Associative MRU's strengths (flexible placement, conflict elimination) are only visible when the access pattern actually creates conflict or capacity pressure. Under a sparse random workload, both organizations converge toward similar, low performance, and the average memory access times reflect this (11.74 ns vs. 11.61 ns is a far narrower gap than the 12.00 ns vs. 9.25 ns seen in Test Case 1).
+Random access produced the lowest hit rates of all three test cases for both organizations, and the smallest gap between them (1.89% vs. 2.82%, compared to a 15-25 percentage point gap in the sequential and mid-repeat tests). This reflects a fundamentally different bottleneck: in Test Cases 1 and 2, misses were dominated by _conflict_ and _capacity_ pressure; patterns specifically constructed to stress each organization's placement and replacement strategy. In Test Case 3, misses are dominated by _compulsory_ misses driven by the sheer sparseness of the access pattern relative to the address space (64 accesses against 1024 possible blocks), a factor neither organization can do anything about. This is a useful contrast for evaluating cache architecture: Direct-Mapped's weaknesses (rigid aliasing) and Fully Associative MRU's strengths (flexible placement, conflict elimination) are only visible when the access pattern actually creates conflict or capacity pressure. Under a sparse random workload, both organizations converge toward similar, low performance, and the average memory access times reflect this (41.23 ns vs. 40.85 ns is a far narrower gap than the 42.00 ns vs. 31.75 ns seen in Test Case 1).
 
 ---
 
