@@ -13,7 +13,7 @@ The simulator provides cache visualization, execution tracing, memory access sta
 | Resource | Link |
 | --- | --- |
 | Deployment Link | https://direct-vs-fa-cache-memory.vercel.app/ |
-| Video walkthrough | https://www.youtu.be/iM-5c7vlS8w/ |
+| Video walkthrough | https://youtu.be/iM-5c7vlS8w/ |
 
 ---
 
