@@ -3,9 +3,10 @@
 	import { tweened } from 'svelte/motion';
 	import { quintOut } from 'svelte/easing';
 
-	let { stats, label }: {
+	let { stats, label, didSkip = false }: {
 		stats: SimulationStatistics;
 		label: string;
+		didSkip?: boolean;
 	} = $props();
 
 	const tweenedHits = tweened(0, { duration: 200, easing: quintOut });
@@ -16,12 +17,13 @@
 	const tweenedTotalTime = tweened(0, { duration: 200, easing: quintOut });
 
 	$effect(() => {
-		tweenedHits.set(stats.hits);
-		tweenedMisses.set(stats.misses);
-		tweenedHitRate.set(stats.hitRate * 100);
-		tweenedMissRate.set(stats.missRate * 100);
-		tweenedAMAT.set(stats.averageMemoryAccessTimeNs);
-		tweenedTotalTime.set(stats.totalMemoryAccessTimeNs);
+		const dur = didSkip ? 50 : 200;
+		tweenedHits.set(stats.hits, { duration: dur });
+		tweenedMisses.set(stats.misses, { duration: dur });
+		tweenedHitRate.set(stats.hitRate * 100, { duration: dur });
+		tweenedMissRate.set(stats.missRate * 100, { duration: dur });
+		tweenedAMAT.set(stats.averageMemoryAccessTimeNs, { duration: dur });
+		tweenedTotalTime.set(stats.totalMemoryAccessTimeNs, { duration: dur });
 	});
 </script>
 

@@ -3,12 +3,13 @@
 	import { scale } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
 
-	let { lines, highlightedLine = -1, hitLine = -1, evictionLine = -1, showLastUsed = false }: {
+	let { lines, highlightedLine = -1, hitLine = -1, evictionLine = -1, showLastUsed = false, didSkip = false }: {
 		lines: CacheLine[];
 		highlightedLine?: number;
 		hitLine?: number;
 		evictionLine?: number;
 		showLastUsed?: boolean;
+		didSkip?: boolean;
 	} = $props();
 
 	function lineClasses(line: CacheLine, idx: number): string {
@@ -20,7 +21,7 @@
 	}
 </script>
 
-<div class="overflow-auto max-h-[600px] rounded-lg border border-gray-300">
+<div class="overflow-auto max-h-[600px] rounded-lg border border-gray-300 no-scrollbar">
 	<table class="w-full text-xs font-mono">
 		<thead class="bg-gray-100 sticky top-0">
 			<tr>
@@ -36,7 +37,8 @@
 		<tbody>
 			{#each lines as line, idx (line.lineIndex)}
 				<tr
-					class="border-t {lineClasses(line, idx)}"
+					class="border-t {lineClasses(line, idx)} {didSkip && line.valid ? 'animate-skip-pop' : ''}"
+					style={didSkip && line.valid ? `animation-delay: ${idx * 5}ms` : ''}
 					transition:scale={{ duration: 200, easing: quintOut }}
 				>
 					<td class="px-2 py-1 text-gray-500">{line.lineIndex}</td>

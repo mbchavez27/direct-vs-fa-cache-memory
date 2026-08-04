@@ -1,6 +1,7 @@
 <script lang="ts">
-	import type { CacheConfig, CacheLine, SimulationStatistics, TraceEntry, TestCaseType } from '$lib/cache/types';
+	import type { CacheConfig, CacheLine, SimulationStatistics, TraceEntry, TestCaseType, ComparisonResult } from '$lib/cache/types';
 	import { CacheSimulator } from '$lib/simulator/CacheSimulator';
+	import { formatComparisonToText } from '$lib/simulator/traceFormatter';
 	import ControlBar from '$lib/components/ControlBar.svelte';
 	import CachePanel from '$lib/components/CachePanel.svelte';
 	import TraceLog from '$lib/components/TraceLog.svelte';
@@ -22,8 +23,14 @@
 	let isPlaying = $state(false);
 	let currentStep = $state(0);
 	let totalSteps = $state(0);
-	let playbackSpeed = $state(500);
+	// Speed level 1 (slow) to 10 (fast), default 5
+	let speedLevel = $state(5);
 	let showConfig = $state(false);
+
+	// Maps speed level 1-10 to delay in ms (1=2000ms slow, 10=50ms fast)
+	const SPEED_TABLE = [2000, 1500, 1000, 750, 500, 350, 250, 150, 100, 50];
+	const playbackSpeed = $derived(SPEED_TABLE[speedLevel - 1] ?? 500);
+	let didSkip = $state(false);
 
 	let dmSimulator = $state<CacheSimulator | null>(null);
 	let faSimulator = $state<CacheSimulator | null>(null);
@@ -31,8 +38,10 @@
 
 	let dmTrace = $state<TraceEntry[]>([]);
 	let faTrace = $state<TraceEntry[]>([]);
-	let dmSnapshot = $state<CacheLine[]>([]);
-	let faSnapshot = $state<CacheLine[]>([]);
+	// svelte-ignore state_referenced_locally
+	let dmSnapshot = $state<CacheLine[]>(createEmptyLines(cacheConfig.cacheBlockCount));
+	// svelte-ignore state_referenced_locally
+	let faSnapshot = $state<CacheLine[]>(createEmptyLines(cacheConfig.cacheBlockCount));
 
 	let dmStats = $state<SimulationStatistics>({
 		totalAccesses: 0, hits: 0, misses: 0, hitRate: 0, missRate: 0, averageMemoryAccessTimeNs: 0, totalMemoryAccessTimeNs: 0,
@@ -42,6 +51,8 @@
 	});
 
 	let timeoutId: ReturnType<typeof setTimeout> | null = null;
+	// Tracks the skip animation timeout so rapid clicks don't stack multiple timers
+	let skipTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
 	function createEmptyLines(count: number): CacheLine[] {
 		return Array.from({ length: count }, (_, i) => ({
@@ -81,6 +92,9 @@
 
 	function handleLoadSequence(seq: number[]) {
 		stopPlayback();
+		// Clear any pending skip animation timer
+		if (skipTimeoutId !== null) { clearTimeout(skipTimeoutId); skipTimeoutId = null; }
+		didSkip = false;
 		sequence = seq;
 		totalSteps = seq.length;
 		currentStep = 0;
@@ -121,6 +135,23 @@
 		doStep();
 	}
 
+	function handleStepBack() {
+		if (!dmSimulator || !faSimulator) return;
+		stopPlayback();
+
+		const dmOk = dmSimulator.stepBack();
+		const faOk = faSimulator.stepBack();
+		if (!dmOk || !faOk) return;
+
+		currentStep--;
+		dmTrace = dmSimulator.getTrace();
+		faTrace = faSimulator.getTrace();
+		dmSnapshot = dmSimulator.getCurrentSnapshot().lines;
+		faSnapshot = faSimulator.getCurrentSnapshot().lines;
+		dmStats = dmSimulator.getStatistics();
+		faStats = faSimulator.getStatistics();
+	}
+
 	function handleReset() {
 		stopPlayback();
 		if (sequence.length > 0) {
@@ -128,10 +159,50 @@
 		}
 	}
 
+	function handleSkip() {
+		if (!dmSimulator || !faSimulator) return;
+		if (currentStep >= totalSteps) return;
+
+		stopPlayback();
+		dmSimulator.runToEnd();
+		faSimulator.runToEnd();
+
+		currentStep = totalSteps;
+		dmTrace = dmSimulator.getTrace();
+		faTrace = faSimulator.getTrace();
+		dmSnapshot = dmSimulator.getCurrentSnapshot().lines;
+		faSnapshot = faSimulator.getCurrentSnapshot().lines;
+		dmStats = dmSimulator.getStatistics();
+		faStats = faSimulator.getStatistics();
+
+		didSkip = true;
+		// Clear any previous skip animation timer before setting a new one
+		if (skipTimeoutId !== null) clearTimeout(skipTimeoutId);
+		skipTimeoutId = setTimeout(() => { didSkip = false; }, 500);
+	}
+
 	function handleApplyConfig() {
 		if (sequence.length > 0) {
 			handleLoadSequence(sequence);
 		}
+	}
+
+	function handleExport() {
+		if (!dmSimulator || !faSimulator || sequence.length === 0) return;
+		const comparison: ComparisonResult = {
+			directMapped: dmSimulator.getSimulationResult(),
+			fullyAssociative: faSimulator.getSimulationResult(),
+		};
+		const text = formatComparisonToText(comparison);
+		const blob = new Blob([text], { type: 'text/plain' });
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = `cache-trace-${new Date().toISOString().slice(0, 10)}.txt`;
+		document.body.appendChild(a);
+		a.click();
+		a.remove();
+		URL.revokeObjectURL(url);
 	}
 
 	let dmHighlight = $derived.by(() => {
@@ -151,6 +222,51 @@
 			hitLine: last.isHit ? last.cacheLineIndex : -1,
 			evictionLine: last.evictedBlock !== null ? last.cacheLineIndex : -1,
 			highlightedLine: !last.isHit ? last.cacheLineIndex : -1,
+		};
+	});
+
+	$effect(() => {
+		if (sequence.length <= 0) return;
+
+		function onKeyDown(e: KeyboardEvent) {
+			if (e.metaKey || e.ctrlKey || e.altKey) return;
+			if (showConfig) return;
+
+			const target = e.target as HTMLElement | null;
+			if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable)) return;
+
+			const isSpace = e.key === ' ' || e.key === 'Space' || e.code === 'Space';
+
+			if (isSpace) {
+				e.preventDefault();
+				if (isPlaying) { handlePause(); }
+				else { handlePlay(); }
+				return;
+			}
+			if (e.key === 'ArrowRight') {
+				e.preventDefault();
+				handleStep();
+				return;
+			}
+			if (e.key === 'ArrowLeft') {
+				e.preventDefault();
+				handleStepBack();
+				return;
+			}
+			if (e.key === 'R' || e.key === 'r') {
+				e.preventDefault();
+				handleReset();
+			}
+			if (e.key === 'End') {
+				e.preventDefault();
+				handleSkip();
+			}
+		}
+
+		window.addEventListener('keydown', onKeyDown);
+
+		return () => {
+			window.removeEventListener('keydown', onKeyDown);
 		};
 	});
 </script>
@@ -196,68 +312,97 @@
 			bind:isPlaying
 			bind:currentStep
 			bind:totalSteps
-			bind:playbackSpeed
+			bind:speedLevel
 			{sequence}
 			onPlay={handlePlay}
 			onPause={handlePause}
 			onStep={handleStep}
+			onStepBack={handleStepBack}
+			onSkip={handleSkip}
 			onReset={handleReset}
 			onLoadSequence={handleLoadSequence}
 		/>
 
-		<SequenceBar
-			{sequence}
-			{currentStep}
-		/>
-
-		<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-		<CachePanel
-			title="Direct-Mapped"
-			lines={dmSnapshot}
-			stats={dmStats}
-			hitLine={dmHighlight.hitLine}
-			evictionLine={dmHighlight.evictionLine}
-			highlightedLine={dmHighlight.highlightedLine}
-			showLastUsed={false}
-		/>
-		<CachePanel
-			title="Fully Associative (MRU)"
-			lines={faSnapshot}
-			stats={faStats}
-			hitLine={faHighlight.hitLine}
-			evictionLine={faHighlight.evictionLine}
-			highlightedLine={faHighlight.highlightedLine}
-			showLastUsed={true}
-		/>
-		</div>
-
-		<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-			<DataFlowVisualizer
-				trace={dmTrace.length > 0 ? dmTrace[dmTrace.length - 1] : null}
-				cacheLines={dmSnapshot}
-				config={cacheConfig}
-				label="Direct-Mapped"
-			/>
-			<DataFlowVisualizer
-				trace={faTrace.length > 0 ? faTrace[faTrace.length - 1] : null}
-				cacheLines={faSnapshot}
-				config={cacheConfig}
-				label="Fully Associative (MRU)"
-			/>
-		</div>
-
-		<div class="grid grid-cols-2 gap-4">
-			<TraceLog
-				trace={dmTrace}
+		{#if sequence.length > 0}
+			<SequenceBar
+				{sequence}
 				{currentStep}
-				label="Direct-Mapped"
+				{didSkip}
 			/>
-			<TraceLog
-				trace={faTrace}
-				{currentStep}
-				label="Fully Associative (MRU)"
+		{:else}
+			<h1 class="text-xl font-bold text-gray-900">No sequence loaded — choose a preset and press Load</h1>
+		{/if}
+			<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+			<CachePanel
+				title="Direct-Mapped"
+				lines={dmSnapshot}
+				stats={dmStats}
+				hitLine={dmHighlight.hitLine}
+				evictionLine={dmHighlight.evictionLine}
+				highlightedLine={dmHighlight.highlightedLine}
+				showLastUsed={false}
+				{didSkip}
 			/>
-		</div>
+			<CachePanel
+				title="Fully Associative (MRU)"
+				lines={faSnapshot}
+				stats={faStats}
+				hitLine={faHighlight.hitLine}
+				evictionLine={faHighlight.evictionLine}
+				highlightedLine={faHighlight.highlightedLine}
+				showLastUsed={true}
+				{didSkip}
+			/>
+			</div>
+
+
+			<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+				<DataFlowVisualizer
+					trace={!didSkip && dmTrace.length > 0 ? dmTrace[dmTrace.length - 1] : null}
+					cacheLines={dmSnapshot}
+					config={cacheConfig}
+					label="Direct-Mapped"
+				/>
+				<DataFlowVisualizer
+					trace={!didSkip && faTrace.length > 0 ? faTrace[faTrace.length - 1] : null}
+					cacheLines={faSnapshot}
+					config={cacheConfig}
+					label="Fully Associative (MRU)"
+				/>
+			</div>
+			{#if sequence.length > 0}
+			<div class="flex items-center justify-between">
+				<h3 class="text-sm font-bold text-gray-800 uppercase tracking-wide">Access Trace</h3>
+				<button
+					onclick={handleExport}
+					disabled={sequence.length === 0 || dmTrace.length === 0}
+					class="inline-flex items-center gap-1.5 bg-white border border-gray-300 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed text-gray-700 text-sm font-medium px-3 py-1.5 rounded transition-colors"
+					title="Download full trace as plain text"
+				>
+					<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+						<polyline points="7 10 12 15 17 10"/>
+						<line x1="12" y1="15" x2="12" y2="3"/>
+					</svg>
+					<span>Export Trace (.txt)</span>
+				</button>
+			</div>
+			<div class="grid grid-cols-2 gap-4">
+				<TraceLog
+					trace={dmTrace}
+					{currentStep}
+					label="Direct-Mapped"
+					{didSkip}
+				/>
+				<TraceLog
+					trace={faTrace}
+					{currentStep}
+					label="Fully Associative (MRU)"
+					{didSkip}
+				/>
+			</div>
+			{/if}
+
 	</div>
 </div>
 

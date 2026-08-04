@@ -12,8 +12,6 @@ export function calculateMetrics(
     misses: number,
     totalMemoryAccessTimeNs: number,
 ): SimulationStatistics {
-    // TODO: Calculate hitRate, missRate, and averageMemoryAccessTimeNs
-
     let hitRate = 0;
     let missRate = 0;
     // Prevent undefined results

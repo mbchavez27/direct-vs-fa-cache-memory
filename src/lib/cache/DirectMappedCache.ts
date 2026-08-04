@@ -89,6 +89,12 @@ export class DirectMappedCache {
         };
     }
 
+    // Restores cache lines and step counter from a saved snapshot
+    public restoreFromSnapshot(snapshot: CacheSnapshot, step: number) {
+        this.lines = snapshot.lines.map((line) => ({ ...line }));
+        this.currentStep = step;
+    }
+
     private createEmptyLines(): CacheLine[] {
         return Array.from(
             { length: this.config.cacheBlockCount },

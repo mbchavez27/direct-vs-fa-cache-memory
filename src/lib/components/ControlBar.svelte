@@ -12,11 +12,13 @@
 		isPlaying = $bindable(false),
 		currentStep = $bindable(0),
 		totalSteps = $bindable(0),
-		playbackSpeed = $bindable(500),
+		speedLevel = $bindable(5),
 		sequence = [],
 		onPlay = () => {},
 		onPause = () => {},
 		onStep = () => {},
+		onStepBack = () => {},
+		onSkip = () => {},
 		onReset = () => {},
 		onLoadSequence = (_seq: number[]) => {},
 	}: {
@@ -26,16 +28,19 @@
 		isPlaying: boolean;
 		currentStep: number;
 		totalSteps: number;
-		playbackSpeed: number;
+		speedLevel: number;
 		sequence: number[];
 		onPlay: () => void;
 		onPause: () => void;
 		onStep: () => void;
+		onStepBack: () => void;
+		onSkip: () => void;
 		onReset: () => void;
 		onLoadSequence: (seq: number[]) => void;
 	} = $props();
 
 	let error = $state('');
+	let skipAnimating = $state(false);
 
 	const presets: TestCaseType[] = ['Sequential', 'Mid-repeat', 'Random', 'Custom'];
 
@@ -124,6 +129,15 @@
 			{/if}
 
 			<button
+				onclick={onStepBack}
+				disabled={isPlaying || totalSteps === 0 || currentStep <= 0}
+				class="bg-[#21262d] hover:bg-[#30363d] disabled:opacity-40 disabled:cursor-not-allowed text-[#c9d1d9] border border-[#30363d] text-sm font-medium px-3 py-1.5 rounded transition-colors"
+				title="Step back"
+			>
+				Back
+			</button>
+
+			<button
 				onclick={onStep}
 				disabled={isPlaying || totalSteps === 0 || currentStep >= totalSteps}
 				class="bg-[#21262d] hover:bg-[#30363d] disabled:opacity-40 disabled:cursor-not-allowed text-[#c9d1d9] border border-[#30363d] text-sm font-medium px-3 py-1.5 rounded transition-colors"
@@ -133,8 +147,26 @@
 			</button>
 
 			<button
+				onclick={() => {
+					skipAnimating = true;
+					onSkip();
+					setTimeout(() => { skipAnimating = false; }, 500);
+				}}
+				disabled={isPlaying || totalSteps === 0 || currentStep >= totalSteps}
+				class="bg-[#8957e5]/20 hover:bg-[#8957e5]/35 disabled:opacity-40 disabled:cursor-not-allowed text-[#d2a8ff] border border-[#8957e5]/40 text-sm font-medium px-3 py-1.5 rounded transition-colors {skipAnimating ? 'animate-skip-glow' : ''}"
+				title="Skip to end"
+			>
+				<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="inline-block align-middle">
+					<polygon points="5 4 15 12 5 20 5 4"/>
+					<line x1="19" y1="5" x2="19" y2="19"/>
+				</svg>
+				<span class="align-middle">Skip</span>
+			</button>
+
+			<button
 				onclick={onReset}
-				class="bg-[#da3633]/20 hover:bg-[#da3633]/35 text-[#f85149] border border-[#f85149]/40 text-sm font-medium px-3 py-1.5 rounded transition-colors"
+				disabled={totalSteps === 0}
+				class="bg-[#da3633]/20 hover:bg-[#da3633]/35 disabled:opacity-40 disabled:cursor-not-allowed text-[#f85149] border border-[#f85149]/40 text-sm font-medium px-3 py-1.5 rounded transition-colors"
 				title="Reset"
 			>
 				Reset
@@ -142,14 +174,14 @@
 		</div>
 
 		<div class="flex flex-col gap-2">
-			<label for="speed-slider" class="text-xs font-medium text-gray-600">Speed ({playbackSpeed}ms)</label>
+			<label for="speed-slider" class="text-xs font-medium text-gray-600">Speed: {speedLevel}/10</label>
 			<input
 				id="speed-slider"
 				type="range"
-				min="50"
-				max="2000"
-				step="50"
-				bind:value={playbackSpeed}
+				min="1"
+				max="10"
+				step="1"
+				bind:value={speedLevel}
 				class="w-24 h-1.5 bg-[#21262d] rounded-lg appearance-none cursor-pointer border border-[#30363d]
 					[&::-webkit-slider-thumb]:appearance-none 
 					[&::-webkit-slider-thumb]:w-3 
@@ -171,35 +203,35 @@
 			{#if sequence.length > 0}
 				<div class="flex items-center gap-1 text-xs">
 					<span class="text-gray-500">Block:</span>
-					<span class="font-mono font-bold text-blue-700 text-sm">{sequence[currentStep] ?? '-'}</span>
+					<span class="font-mono font-bold text-blue-700 text-sm">{sequence[currentStep - 1] ?? '-'}</span>
 					<span class="text-gray-400 mx-1">|</span>
 					<span class="text-gray-500">Seq:</span>
 					<span class="font-mono text-gray-600">
 						{#if sequence.length <= 7}
 							{#each sequence as block, i}
-								{#if i === currentStep}
+								{#if i === currentStep - 1}
 									<span class="text-blue-700 font-bold">[{block}]</span>
 								{:else}
-									<span class:text-gray-400={i < currentStep}>{block}</span>
+									<span class:text-gray-400={i < currentStep - 1}>{block}</span>
 								{/if}
 								{#if i < sequence.length - 1}<span class="text-gray-400"> → </span>{/if}
 							{/each}
 						{:else}
 							{#each sequence.slice(0, 3) as block, i}
-								{#if i === currentStep}
+								{#if i === currentStep - 1}
 									<span class="text-blue-700 font-bold">[{block}]</span>
 								{:else}
-									<span class:text-gray-400={i < currentStep}>{block}</span>
+									<span class:text-gray-400={i < currentStep - 1}>{block}</span>
 								{/if}
 								<span class="text-gray-400"> → </span>
 							{/each}
 							<span class="text-gray-400">... </span>
-							{#if currentStep >= 3}
-								<span class="text-blue-700 font-bold">[{sequence[currentStep]}]</span>
+							{#if currentStep - 1 >= 3}
+								<span class="text-blue-700 font-bold">[{sequence[currentStep - 1]}]</span>
 							{/if}
 							<span class="text-gray-400"> → </span>
 							{#each sequence.slice(-2) as block, i}
-								{#if currentStep === sequence.length - 2 + i}
+								{#if currentStep - 1 === sequence.length - 2 + i}
 									<span class="text-blue-700 font-bold">[{block}]</span>
 								{:else}
 									<span>{block}</span>
@@ -210,13 +242,26 @@
 					</span>
 				</div>
 			{/if}
-			<div>
-				Step <span class="font-mono font-bold">{currentStep}</span> / <span class="font-mono">{totalSteps}</span>
+			<div class="flex items-center gap-2">
+				<div>
+					Step <span class="font-mono font-bold">{currentStep}</span> / <span class="font-mono">{totalSteps}</span>
+				</div>
+				{#if sequence.length > 0 && currentStep >= totalSteps}
+					<span
+						class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-green-200 text-green-800"
+						title="All steps executed"
+					>
+						<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+							<path d="M20 6 9 17l-5-5"/>
+						</svg>
+						Completed
+					</span>
+				{/if}
 			</div>
 		</div>
 	</div>
-
 	{#if error}
 		<div class="mt-2 text-xs text-red-600 bg-red-50 rounded px-2 py-1">{error}</div>
 	{/if}
+	<p class="text-xs font-medium text-gray-600 pt-1"> Space - play/pause | ← → arrow keys - step back/forward | End - skip | R - reset</p>
 </div>

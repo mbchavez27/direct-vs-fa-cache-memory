@@ -11,12 +11,55 @@
 	75% { transform: translateX(2px); }
 }
 
+/* no scrollbar */
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
 .animate-pulse-once {
 	animation: pulse-once 0.3s ease-in-out;
 }
 
 .animate-shake {
 	animation: shake 0.3s ease-in-out;
+}
+
+/* Skip button glow */
+@keyframes skip-glow {
+	0% { box-shadow: 0 0 0 0 rgba(137, 87, 229, 0.6); }
+	50% { box-shadow: 0 0 16px 4px rgba(137, 87, 229, 0.4); }
+	100% { box-shadow: 0 0 0 0 rgba(137, 87, 229, 0); }
+}
+
+.animate-skip-glow {
+	animation: skip-glow 0.5s ease-out;
+}
+
+/* Sequence bar sweep highlight */
+@keyframes skip-sweep {
+	0% { background-color: rgba(137, 87, 229, 0.35); box-shadow: 0 0 8px rgba(137, 87, 229, 0.5); }
+	100% { background-color: transparent; box-shadow: none; }
+}
+
+.animate-skip-sweep {
+	animation: skip-sweep 0.4s ease-out forwards;
+}
+
+/* Cache row pop-in */
+@keyframes skip-pop {
+	0% { transform: scale(0.8); opacity: 0.4; }
+	60% { transform: scale(1.05); }
+	100% { transform: scale(1); opacity: 1; }
+}
+
+.animate-skip-pop {
+	animation: skip-pop 0.25s ease-out forwards;
 }
 
 /* Latest config - Airon */

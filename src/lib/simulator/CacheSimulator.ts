@@ -21,6 +21,9 @@ export class CacheSimulator {
     private sequence: number[];
     private currentStepIndex: number;
     private traceEntries: TraceEntry[];
+    // Cache snapshots and stats at each step, enabling undo via stepBack()
+    private snapshotHistory: CacheSnapshot[];
+    private statsHistory: SimulationStatistics[];
 
     constructor(organization: CacheOrganization, config: CacheConfig) {
         this.organization = organization;
@@ -45,6 +48,9 @@ export class CacheSimulator {
         this.currentStepIndex = 0;
         this.traceEntries = [];
         this.sequence = [];
+        // Seed history with the initial empty-cache state
+        this.snapshotHistory = [this.cacheMemory.getSnapshot()];
+        this.statsHistory = [{ ...this.simulationStatistics }];
     }
 
     public loadSequence(sequence: number[]) {
@@ -75,6 +81,9 @@ export class CacheSimulator {
         };
         this.currentStepIndex = 0;
         this.traceEntries = [];
+        // Reset history to initial empty state
+        this.snapshotHistory = [this.cacheMemory.getSnapshot()];
+        this.statsHistory = [{ ...this.simulationStatistics }];
     }
 
     public step(): boolean {
@@ -118,11 +127,41 @@ export class CacheSimulator {
         // Next step
         this.currentStepIndex++;
 
+        // Save state history for step-back support
+        this.snapshotHistory.push(this.cacheMemory.getSnapshot());
+        this.statsHistory.push({ ...this.simulationStatistics });
+
         return true;
     }
 
     public runToEnd() {
         while (this.step()) {}
+    }
+
+    // Returns true if there is at least one completed step to undo
+    public canStepBack(): boolean {
+        return this.currentStepIndex > 0;
+    }
+
+    // Undoes the last step by restoring the previous snapshot and stats
+    public stepBack(): boolean {
+        if (!this.canStepBack()) {
+            return false;
+        }
+
+        // Pop current state from history
+        this.snapshotHistory.pop();
+        this.statsHistory.pop();
+        this.traceEntries.pop();
+
+        // Restore previous state
+        const prevSnapshot = this.snapshotHistory[this.snapshotHistory.length - 1];
+        const prevStats = this.statsHistory[this.statsHistory.length - 1];
+        this.currentStepIndex--;
+        this.cacheMemory.restoreFromSnapshot(prevSnapshot, this.currentStepIndex);
+        this.simulationStatistics = { ...prevStats };
+
+        return true;
     }
 
     public isFinished(): boolean {
